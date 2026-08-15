@@ -43,10 +43,12 @@ document.addEventListener("click", async e => {
   const url = `${location.origin}/e/${btn.dataset.slug}/`;
   if (navigator.share) { navigator.share({ title: btn.dataset.name, url }).catch(() => {}); return; }
   try { await navigator.clipboard.writeText(url); } catch { return; }
-  const old = btn.textContent;
-  btn.textContent = "скопировано";
-  btn.disabled = true;
-  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1500);
+  btn.classList.add("ok");
+  btn.setAttribute("aria-label", "Ссылка скопирована");
+  setTimeout(() => {
+    btn.classList.remove("ok");
+    btn.setAttribute("aria-label", "Поделиться ссылкой на запись");
+  }, 1500);
 });
 
 // — лайтбокс: кадры-кнопки, доступно с клавиатуры —

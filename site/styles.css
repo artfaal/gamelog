@@ -188,10 +188,21 @@ h2, h3, h4 {
 
 .drop-tag { color: var(--color-accent); }
 .platform { text-transform: uppercase; }
-.share { all: unset; cursor: pointer; font: inherit; color: var(--color-neutral); }
+.share {
+  all: unset;
+  cursor: pointer;
+  color: var(--color-neutral);
+  display: inline-flex;
+  vertical-align: -4px;
+  margin-inline-start: var(--space-sm);
+}
+.share svg { width: 16px; height: 16px; }
+.share .i-check { display: none; }
+.share.ok { color: var(--color-accent); cursor: default; }
+.share.ok .i-share { display: none; }
+.share.ok .i-check { display: inline; }
 .share:hover { color: var(--color-accent); }
 .share:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
-.share:disabled { color: var(--color-accent); cursor: default; }
 
 .rev { color: var(--color-accent); text-decoration: none; }
 .rev:hover { text-decoration: underline; text-underline-offset: 3px; }
