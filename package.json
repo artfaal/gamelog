@@ -1,0 +1,9 @@
+{
+  "name": "gamelog",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "marked": "^15.0.0"
+  }
+}

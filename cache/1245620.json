@@ -1,0 +1,16 @@
+{
+  "appid": 1245620,
+  "name": "ELDEN RING",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1245620/library_600x900_2x.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_943bf6fe62352757d9070c1d33e50b92fe8539f1.1920x1080.jpg?t=1784684281",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_dcdac9e4b26ac0ee5248bfd2967d764fd00cdb42.1920x1080.jpg?t=1784684281",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_3c41384a24d86dddd58a8f61db77f9dc0bfda8b5.1920x1080.jpg?t=1784684281",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_e0316c76f8197405c1312d072b84331dd735d60b.1920x1080.jpg?t=1784684281",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_ef61b771ee6b269b1f0cb484233e07a0bfb5f81b.1920x1080.jpg?t=1784684281",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/ss_b1b91299d7e4b94201ac840aa64de54d9f5cb7f3.1920x1080.jpg?t=1784684281"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/256889452/microtrailer.webm"
+}

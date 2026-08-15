@@ -1,0 +1,15 @@
+{
+  "appid": 1174180,
+  "name": "Red Dead Redemption 2",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1174180/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1174180/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1174180/library_600x900_2x.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/ss_66b553f4c209476d3e4ce25fa4714002cc914c4f.1920x1080.jpg?t=1759502961",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/ss_bac60bacbf5da8945103648c08d27d5e202444ca.1920x1080.jpg?t=1759502961",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/ss_668dafe477743f8b50b818d5bbfcec669e9ba93e.1920x1080.jpg?t=1759502961",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/ss_4ce07ae360b166f0f650e9a895a3b4b7bf15e34f.1920x1080.jpg?t=1759502961",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1174180/ss_d1a8f5a69155c3186c65d1da90491fcfd43663d9.1920x1080.jpg?t=1759502961"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/256767979/microtrailer.webm"
+}
