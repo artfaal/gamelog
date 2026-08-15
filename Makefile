@@ -9,7 +9,7 @@ drafts:
 
 serve: drafts
 	@echo "http://localhost:8480"
-	@cd dist && python3 -m http.server 8480
+	@cd dist && python3 -m http.server 8480 --bind 127.0.0.1
 
 deploy: build
 	rsync -az --delete dist/ $(DEPLOY_DEST)

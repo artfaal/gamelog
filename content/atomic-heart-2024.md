@@ -2,6 +2,7 @@
 steam: 668580
 finished: 2024-07-21
 hours: 3
+dropped: true
 verdict: Красиво, но не завелось.
 draft: true
 ---

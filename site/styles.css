@@ -186,14 +186,16 @@ h2, h3, h4 {
 
 .drop-tag { color: var(--color-accent); }
 .platform { text-transform: uppercase; }
-.rev { color: var(--color-accent); text-decoration: none; white-space: nowrap; }
+.rev { color: var(--color-accent); text-decoration: none; }
 .rev:hover { text-decoration: underline; text-underline-offset: 3px; }
 .rev:active { color: var(--color-ink); }
 
 /* ———— медиа ———— */
 .glass--media { display: grid; gap: var(--space-md); }
 .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
-.shot { border-radius: var(--radius-sm); width: 100%; cursor: zoom-in; }
+.shotbtn { all: unset; display: block; cursor: zoom-in; }
+.shotbtn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.shot { border-radius: var(--radius-sm); width: 100%; }
 .clip { border-radius: var(--radius-sm); width: 100%; }
 
 /* ———— моменты ———— */
@@ -216,22 +218,40 @@ h2, h3, h4 {
 
 /* ———— спойлеры ———— */
 .spoiler {
+  all: unset;
+  font: inherit;
+  color: inherit;
   filter: blur(6px);
   cursor: pointer;
   transition: filter var(--dur-short) var(--ease-out);
 }
+button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; filter: blur(4px); }
 .spoiler.open { filter: none; cursor: auto; }
+.moment.is-spoiler { position: relative; }
 .moment.is-spoiler:not(.open) img,
-.moment.is-spoiler:not(.open) figcaption p { filter: blur(14px); cursor: pointer; }
-.moment.is-spoiler:not(.open) img { cursor: pointer; }
-.moment.is-spoiler figcaption strong::after {
-  content: " · спойлер";
+.moment.is-spoiler:not(.open) figcaption { filter: blur(14px); pointer-events: none; }
+.reveal {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-raised);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--color-accent);
+  font-size: var(--text-sm);
   letter-spacing: 0.02em;
+  color: var(--color-accent);
 }
-.moment.is-spoiler.open figcaption strong::after { content: ""; }
+.reveal:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; border-radius: var(--radius-sm); }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* ———— кнопка и оверлей оглавления ———— */
 .toc-btn {

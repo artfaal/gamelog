@@ -3,12 +3,14 @@
 // Машинное — только в cache/<appid>.json; md на 100% рукописный.
 import { writeFileSync, existsSync } from "node:fs";
 
-const [appid, ...rest] = process.argv.slice(2);
-if (!appid || !/^\d+$/.test(appid)) {
+const args = process.argv.slice(2);
+const appid = args[0];
+const si = args.indexOf("--slug");
+const slugArg = si === -1 ? null : args[si + 1];
+if (!appid || !/^\d+$/.test(appid) || (si !== -1 && !slugArg)) {
   console.error("usage: node scripts/new.mjs <appid> [--slug my-slug]");
   process.exit(1);
 }
-const slugArg = rest[rest.indexOf("--slug") + 1];
 
 const res = await fetch(
   `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=english`,
@@ -38,6 +40,10 @@ console.log(`cache/${appid}.json — ${cache.name}, ${cache.shots.length} скр
 const slug =
   slugArg ??
   data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+  console.error(`слаг «${slug}» не годится — задай руками: --slug my-slug`);
+  process.exit(1);
+}
 const md = `content/${slug}.md`;
 if (existsSync(md)) {
   console.log(`${md} уже есть — не трогаю`);
@@ -46,9 +52,9 @@ if (existsSync(md)) {
     md,
     `---
 steam: ${appid}
-finished: ${new Date().toISOString().slice(0, 10)}
+finished: ${new Date().toLocaleDateString("sv")}
 hours: 0
-score:
+score:            # 1–10; дропнул — убери score и поставь dropped: true
 verdict:
 draft: true
 ---

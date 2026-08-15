@@ -10,38 +10,58 @@ const SITE = "https://games.artfaal.ru";
 
 // ---------- утилиты ----------
 const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+const abs = u => new URL(u, SITE + "/").href;
 const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 const ruDate = iso => {
   const [y, m, d] = String(iso).split("-").map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
 };
-const ruHours = n => {
+const plural = (n, one, few, many) => {
   const m10 = n % 10, m100 = n % 100;
-  const w = (m100 >= 11 && m100 <= 14) ? "часов" : m10 === 1 ? "час" : (m10 >= 2 && m10 <= 4) ? "часа" : "часов";
-  return `${n} ${w}`;
+  return `${n} ${(m100 >= 11 && m100 <= 14) ? many : m10 === 1 ? one : (m10 >= 2 && m10 <= 4) ? few : many}`;
 };
-// ||спойлер|| → кликабельный блюр (до markdown, чтобы работало в любом месте текста)
-const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g, '<span class="spoiler" tabindex="0">$1</span>');
+const ruHours = n => plural(n, "час", "часа", "часов");
+const ruGames = n => plural(n, "игра", "игры", "игр");
+// ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
+const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
+  '<button type="button" class="spoiler" aria-expanded="false" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
 const mdToHtml = md => marked.parse(spoilers(md));
 
-// ---------- чтение записей ----------
+// ---------- чтение и валидация записей ----------
+let broken = false;
 const entries = [];
 for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   const slug = f.replace(/\.md$/, "");
   const { data: fm, content: body } = matter(readFileSync(`content/${f}`, "utf8"));
   if (fm.draft && !DRAFTS) continue;
-  // YAML отдаёт даты Date-объектом — нормализуем в ISO-строку
-  if (fm.finished instanceof Date) fm.finished = fm.finished.toISOString().slice(0, 10);
+  // ошибки драфта не валят сборку — драфт просто пропускается с предупреждением
+  const errs = [];
+  const fail = (_f, msg) => errs.push(msg);
 
-  const steam = fm.steam ? JSON.parse(readFileSync(`cache/${fm.steam}.json`, "utf8")) : null;
+  // YAML отдаёт даты Date-объектом — нормализуем в ISO-строку
+  if (fm.finished instanceof Date && !isNaN(fm.finished)) fm.finished = fm.finished.toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fm.finished))) fail(f, `кривая дата finished: ${fm.finished}`);
+  if (!Number.isFinite(fm.hours) || fm.hours < 0) fail(f, `hours должно быть числом: ${fm.hours}`);
+  if (fm.dropped && fm.score != null) fail(f, "dropped: true несовместим со score");
+  if (!fm.dropped && !(Number.isInteger(fm.score) && fm.score >= 1 && fm.score <= 10))
+    fail(f, "нужен score 1–10 — или dropped: true");
+
+  let steam = null;
+  if (fm.steam) {
+    if (existsSync(`cache/${fm.steam}.json`)) steam = JSON.parse(readFileSync(`cache/${fm.steam}.json`, "utf8"));
+    else fail(f, `нет cache/${fm.steam}.json — запусти: node scripts/new.mjs ${fm.steam}`);
+  } else if (!fm.hero) fail(f, "нужно поле steam: <appid> — или hero: media/…");
+
   const media = p => {
     if (typeof p !== "number") return p;
-    if (!steam) throw new Error(`content/${f}: номер скрина ${p} без поля steam`);
+    if (!steam || !(p in steam.shots)) { fail(f, `нет магазинного скрина №${p}`); return null; }
     return steam.shots[p];
   };
 
   // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref) / текст)
-  const [main, momentsRaw] = body.split(/^## Моменты\s*$/m);
+  const parts = body.split(/^## Моменты\s*$/m);
+  if (parts.length > 2) fail(f, "секция «## Моменты» должна быть одна");
+  const [main, momentsRaw] = parts;
   const moments = [];
   if (momentsRaw) {
     for (const chunk of momentsRaw.split(/^### /m).slice(1)) {
@@ -64,16 +84,29 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     steam,
     name: fm.name ?? steam?.name ?? slug,
     hero: media(fm.hero ?? steam?.hero),
-    logo: fm.logo ? media(fm.logo) : steam?.logo ?? null,
-    poster: fm.poster ? media(fm.poster) : steam?.poster ?? null,
-    shots: (fm.shots ?? (steam ? [0, 1] : [])).map(media).filter(Boolean),
+    logo: fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
+    poster: fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
+    shots: (fm.shots ?? (steam && !fm.dropped ? [0, 1] : [])).map(media).filter(Boolean),
     clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? fm.clip : steam?.micro ?? null,
-    dropped: fm.score == null,
+    dropped: fm.dropped === true,
     html: mdToHtml(main.trim()),
     moments,
   });
+  if (errs.length) {
+    entries.pop();
+    const tag = fm.draft ? "⚠ (драфт пропущен)" : "✗";
+    for (const m of errs) console.error(`${tag} content/${f}: ${m}`);
+    if (!fm.draft) broken = true;
+  }
 }
-entries.sort((a, b) => String(b.fm.finished).localeCompare(String(a.fm.finished)));
+
+if (broken) { console.error("сборка остановлена — исправь контент"); process.exit(1); }
+if (!DRAFTS && entries.length === 0) {
+  console.error("прод-сборка пуста: ни одной записи без draft — deploy отменён");
+  process.exit(1);
+}
+entries.sort((a, b) =>
+  String(b.fm.finished).localeCompare(String(a.fm.finished)) || a.slug.localeCompare(b.slug));
 
 // связки заходов одной игры: общий ключ = steam appid | fm.game | slug
 const gameKey = e => e.fm.steam ?? e.fm.game ?? e.slug;
@@ -100,27 +133,29 @@ const clipHtml = e => e.clip
       poster="${esc(e.shots[0] ?? e.hero)}" aria-label="Видео: ${esc(e.name)}"></video>`
   : "";
 
-const shotHtml = (e, src, alt, cls = "shot") =>
-  `<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="1920" height="1080">`;
+// кадр — кнопка: лайтбокс доступен с клавиатуры
+const shotHtml = (src, alt, hidden = false) =>
+  `<button type="button" class="shotbtn"><img class="shot" src="${esc(src)}" alt="${esc(alt)}"${hidden ? ' aria-hidden="true"' : ""} loading="lazy" width="1920" height="1080"></button>`;
 
 const momentsHtml = e => e.moments.length
   ? `<div class="glass"><div class="moments"><h4 class="moments__title">Моменты</h4>${e.moments.map(m => `
       <figure class="moment${m.spoiler ? " is-spoiler" : ""}">
-        ${m.shot ? shotHtml(e, m.shot, m.alt) : ""}
-        <figcaption><strong>${esc(m.title)}</strong>${m.html}</figcaption>
+        ${m.spoiler ? '<button type="button" class="reveal">спойлер — показать</button>' : ""}
+        ${m.shot ? shotHtml(m.shot, m.alt, m.spoiler) : ""}
+        <figcaption${m.spoiler ? ' aria-hidden="true"' : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
       </figure>`).join("")}</div></div>`
   : "";
 
 const entryHtml = (e, i) => {
   const logo = e.logo
-    ? `<img class="logo" src="${esc(e.logo)}" alt="${esc(e.name)}" loading="lazy">`
+    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo" src="${esc(e.logo)}" alt="" loading="lazy">`
     : `<h2 class="logo-text">${esc(e.name)}</h2>`;
   const score = e.dropped ? "" :
     `<span class="score" aria-label="Оценка ${e.fm.score} из 10"><span class="n">${e.fm.score}</span><span class="of">из 10</span></span>`;
-  const mediaPanel = e.dropped ? "" : `
+  const mediaPanel = e.dropped || (!e.clip && !e.shots.length) ? "" : `
     <div class="glass glass--media">
       ${clipHtml(e)}
-      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(e, s, `Кадр из ${e.name}`)).join("")}</div>` : ""}
+      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(s, `Кадр из ${e.name}`)).join("")}</div>` : ""}
     </div>`;
   return `
   <article class="stage" id="${esc(e.slug)}" data-nav="${i}">
@@ -143,18 +178,14 @@ const entryHtml = (e, i) => {
 
 const tocHtml = entries.map((e, i) => `
   <a href="#${esc(e.slug)}" data-nav-to="${i}">
-    ${e.poster ? `<img src="${esc(e.poster)}" alt="" loading="lazy" width="600" height="900">`
-               : `<img src="${esc(e.hero)}" alt="" loading="lazy" width="600" height="900">`}
+    <img src="${esc(e.poster ?? e.hero)}" alt="" loading="lazy" width="600" height="900">
     <span class="nm">${esc(e.name)}</span>
     <span class="mono">${e.dropped ? '<span class="drop-tag">дроп</span> · ' : ""}${String(e.fm.finished).slice(0, 4)}</span>
   </a>`).join("");
 
 const games = new Set(entries.filter(e => !e.dropped).map(gameKey)).size;
+// ponytail: часы суммируются по всем заходам, включая дропы — это «наиграно всего»
 const hours = entries.reduce((s, e) => s + (e.fm.hours ?? 0), 0);
-const ruGames = n => {
-  const m10 = n % 10, m100 = n % 100;
-  return `${n} ${(m100 >= 11 && m100 <= 14) ? "игр" : m10 === 1 ? "игра" : (m10 >= 2 && m10 <= 4) ? "игры" : "игр"}`;
-};
 
 const page = `<!doctype html>
 <html lang="ru">
@@ -165,7 +196,7 @@ const page = `<!doctype html>
 <meta name="description" content="Игровой дневник: ${ruGames(games)}, ${ruHours(hours)}.">
 <meta property="og:title" content="Хроника">
 <meta property="og:description" content="Игровой дневник: впечатления, кадры, воспоминания.">
-${entries[0] ? `<meta property="og:image" content="${esc(entries[0].hero)}">` : ""}
+${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}">` : ""}
 <meta property="og:url" content="${SITE}/">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -173,21 +204,21 @@ ${entries[0] ? `<meta property="og:image" content="${esc(entries[0].hero)}">` : 
 </head>
 <body id="top">
 <header class="site-head">
-  <span class="wordmark">Хроника</span>
+  <h1 class="wordmark">Хроника</h1>
   <span class="mono">${ruGames(games)} · ${hours} ч</span>
 </header>
+<button class="toc-btn" id="toc-btn" aria-haspopup="dialog">☰ оглавление</button>
 <main>${entries.map(entryHtml).join("")}</main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>
   <span class="mono">Ассеты игр — Steam · <a href="https://artfaal.ru">artfaal</a></span>
 </footer>
-<button class="toc-btn" id="toc-btn" aria-haspopup="dialog">☰ оглавление</button>
-<dialog class="tocd" id="tocd">
+<dialog class="tocd" id="tocd" aria-labelledby="tocd-title">
   <button class="x" id="tocd-x" aria-label="Закрыть">✕</button>
-  <h4>Оглавление</h4>
+  <h4 id="tocd-title">Оглавление</h4>
   <nav class="tocd__list" id="tocd-list" aria-label="Список игр">${tocHtml}</nav>
 </dialog>
-<dialog class="lb" id="lb">
+<dialog class="lb" id="lb" aria-label="Кадр во весь экран">
   <button class="x" id="lb-x" aria-label="Закрыть">✕</button>
   <img id="lb-img" alt="">
   <p class="mono cap" id="lb-cap"></p>
@@ -205,7 +236,7 @@ const stub = e => `<!doctype html>
 <title>${esc(e.name)} · Хроника</title>
 <meta property="og:title" content="${esc(e.name)} · Хроника">
 <meta property="og:description" content="${esc(e.fm.verdict ?? "")}">
-<meta property="og:image" content="${esc(e.hero)}">
+<meta property="og:image" content="${esc(abs(e.hero))}">
 <meta property="og:url" content="${SITE}/e/${esc(e.slug)}/">
 <meta http-equiv="refresh" content="0; url=/#${esc(e.slug)}">
 <link rel="canonical" href="${SITE}/#${esc(e.slug)}">
@@ -225,4 +256,4 @@ for (const e of entries) {
   mkdirSync(`dist/e/${e.slug}`, { recursive: true });
   writeFileSync(`dist/e/${e.slug}/index.html`, stub(e));
 }
-console.log(`dist: ${entries.length} записей (${games} игр, ${hours} ч)${DRAFTS ? " + драфты" : ""}`);
+console.log(`dist: ${entries.length} записей (${ruGames(games)}, ${hours} ч)${DRAFTS ? " + драфты" : ""}`);

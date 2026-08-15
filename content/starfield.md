@@ -2,6 +2,7 @@
 steam: 1716740
 finished: 2025-09-14
 hours: 11
+dropped: true
 verdict: Тысяча планет — и ни одной причины возвращаться.
 draft: true
 ---
