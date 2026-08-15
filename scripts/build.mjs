@@ -138,6 +138,38 @@ if (!DRAFTS && entries.length === 0) {
 entries.sort((a, b) =>
   String(b.fm.finished).localeCompare(String(a.fm.finished)) || a.slug.localeCompare(b.slug));
 
+// Steam-ассеты кэшируются локально (cache/assets, вне git) и раздаются со своего домена —
+// сайт не зависит от доступности steamstatic у читателя. Сеть нужна один раз на новый ассет.
+const toCopy = new Map();
+async function localize(url, appid) {
+  if (typeof url !== "string" || !/^https?:\/\//.test(url) || !/steamstatic\.com/.test(url)) return url;
+  const base = new URL(url).pathname.split("/").pop();
+  const dir = `cache/assets/${appid}`;
+  const file = `${dir}/${base}`;
+  if (!existsSync(file)) {
+    mkdirSync(dir, { recursive: true });
+    const r = await fetch(url).catch(() => null);
+    if (!r?.ok) {
+      console.error(`✗ не скачался ассет ${url} (${r?.status ?? "сеть"}); за прокси: NODE_USE_ENV_PROXY=1 HTTPS_PROXY=… make …`);
+      process.exit(1);
+    }
+    writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+  }
+  const rel = `a/${appid}/${base}`;
+  toCopy.set(rel, file);
+  return rel;
+}
+for (const e of entries) {
+  const id = e.fm.steam;
+  if (!id) continue;
+  e.hero = await localize(e.hero, id);
+  if (e.logo) e.logo = await localize(e.logo, id);
+  if (e.poster) e.poster = await localize(e.poster, id);
+  e.shots = await Promise.all(e.shots.map(u => localize(u, id)));
+  if (e.clip) e.clip = await localize(e.clip, id);
+  for (const m of e.moments) if (m.shot) m.shot = await localize(m.shot, id);
+}
+
 // связки заходов одной игры: общий ключ = steam appid | fm.game | slug
 const gameKey = e => e.fm.steam ?? e.fm.game ?? e.slug;
 for (const e of entries) {
@@ -301,5 +333,9 @@ if (existsSync("content/media")) cpSync("content/media", "dist/media", { recursi
 for (const e of entries) {
   mkdirSync(`dist/e/${e.slug}`, { recursive: true });
   writeFileSync(`dist/e/${e.slug}/index.html`, stub(e));
+}
+for (const [rel, file] of toCopy) {
+  mkdirSync(`dist/${rel.slice(0, rel.lastIndexOf("/"))}`, { recursive: true });
+  cpSync(file, `dist/${rel}`);
 }
 console.log(`dist: ${entries.length} записей (${ruGames(games)}, ${hours} ч)${DRAFTS ? " + драфты" : ""}`);

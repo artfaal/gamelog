@@ -2,3 +2,4 @@ node_modules/
 dist/
 content/media/*.webm
 content/media/*.mp4
+cache/assets/
