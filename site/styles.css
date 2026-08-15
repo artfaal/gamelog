@@ -136,7 +136,7 @@ h2, h3, h4 {
   bottom: clamp(5rem, 20svh, 12rem);
   z-index: var(--z-raised);
 }
-.hero .logo { max-height: 88px; max-width: min(60vw, 360px); width: auto; object-fit: contain; }
+.hero .logo { max-height: 88px; max-width: min(60vw, 360px); width: auto; object-fit: contain; filter: drop-shadow(0 2px 20px var(--color-scrim)); }
 .hero .logo-text {
   font-size: var(--text-2xl);
   text-align: center;
@@ -211,7 +211,7 @@ h2, h3, h4 {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: var(--space-lg);
-  align-items: start;
+  align-items: center;
 }
 .moment figcaption strong {
   font-family: var(--font-display);
