@@ -231,10 +231,14 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .moment.is-spoiler { position: relative; }
 .moment.is-spoiler:not(.open) img,
 .moment.is-spoiler:not(.open) figcaption { filter: blur(14px); pointer-events: none; }
+/* плашка лежит в ячейке кадра — по центру заблюренного изображения */
+.moment.is-spoiler .shotbtn { grid-area: 1 / 1; }
+.moment.is-spoiler figcaption { grid-area: 1 / 2; }
 .reveal {
   all: unset;
-  position: absolute;
-  inset: 0;
+  grid-area: 1 / 1;
+  align-self: stretch;
+  justify-self: stretch;
   z-index: var(--z-raised);
   display: grid;
   place-content: center;
@@ -243,13 +247,13 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .reveal::after {
   content: "спойлер — показать";
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   letter-spacing: 0.02em;
   color: var(--color-accent);
   background: var(--color-scrim-strong);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-lg);
+  padding: var(--space-md) var(--space-xl);
 }
 .reveal:hover::after { color: var(--color-ink); border-color: var(--color-neutral); }
 .reveal:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; border-radius: var(--radius-sm); }
@@ -286,27 +290,41 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   background: var(--color-paper-2);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
-  width: min(94vw, 30rem);
+  width: min(94vw, 44rem);
   max-height: 86dvh;
 }
 .tocd::backdrop { background: var(--color-scrim-strong); }
 .tocd h4 { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
-.tocd__list { display: grid; gap: var(--space-2xs); }
-.tocd__list a {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-md);
-  align-items: center;
-  text-decoration: none;
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  border-inline-start: 2px solid transparent;
+.tocd__year h5 {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  color: var(--color-neutral);
+  letter-spacing: 0.02em;
+  margin: var(--space-md) 0 var(--space-sm);
 }
-.tocd__list a:hover { background: var(--color-paper-3); }
-.tocd__list a.on { border-inline-start-color: var(--color-accent); background: var(--color-paper-3); }
-.tocd__list img { width: 48px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 2px; }
-.tocd__list .nm { font-weight: 400; line-height: 1.3; color: var(--color-ink); }
-.tocd__list .mono { white-space: nowrap; }
+.tocd__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: var(--space-sm);
+}
+.tocd__grid a {
+  position: relative;
+  display: block;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+}
+.tocd__grid a img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 3px; }
+.tocd__grid a:hover { border-color: var(--color-neutral); }
+.tocd__grid a.on { border-color: var(--color-accent); }
+.tocd__drop {
+  position: absolute;
+  bottom: var(--space-2xs);
+  left: var(--space-2xs);
+  background: var(--color-scrim-strong);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--color-accent);
+}
 
 /* ———— лайтбокс ———— */
 .lb {
@@ -347,6 +365,7 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: 
   .hero .logo-text { font-size: var(--text-xl); }
   .body { margin-top: -10dvh; }
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
+  .moment.is-spoiler figcaption { grid-area: auto; }
   .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); }
 }
 

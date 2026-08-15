@@ -197,12 +197,23 @@ const entryHtml = (e, i) => {
   </article>`;
 };
 
-const tocHtml = entries.map((e, i) => `
-  <a href="#${esc(e.slug)}" data-nav-to="${i}">
-    <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
-    <span class="nm">${esc(e.name)}</span>
-    <span class="mono">${e.dropped ? '<span class="drop-tag">дроп</span> · ' : ""}${String(e.fm.finished).slice(0, 4)}</span>
-  </a>`).join("");
+// оглавление: год-группы с сеткой постеров — масштабируется на десятки игр
+const byYear = new Map();
+entries.forEach((e, i) => {
+  const y = String(e.fm.finished).slice(0, 4);
+  if (!byYear.has(y)) byYear.set(y, []);
+  byYear.get(y).push([e, i]);
+});
+const tocHtml = [...byYear].map(([y, items]) => `
+  <section class="tocd__year">
+    <h5 class="mono">${y}</h5>
+    <div class="tocd__grid">${items.map(([e, i]) => `
+      <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}"
+         aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : ""}">
+        <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
+        ${e.dropped ? '<span class="tocd__drop mono">дроп</span>' : ""}
+      </a>`).join("")}</div>
+  </section>`).join("");
 
 const games = new Set(entries.filter(e => !e.dropped).map(gameKey)).size;
 // ponytail: часы суммируются по всем заходам, включая дропы — это «наиграно всего»
