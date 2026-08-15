@@ -43,8 +43,11 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   // (невозможную дату 2026-02-31 YAML молча превращает в 2026-03-03)
   if (fm.finished instanceof Date && !isNaN(fm.finished)) fm.finished = fm.finished.toISOString().slice(0, 10);
   const rawDate = /^finished:\s*["']?(\d{4}-\d{2}-\d{2})["']?\s*(?:#.*)?$/m.exec(parsed.matter)?.[1];
-  const isoOk = d => /^\d{4}-\d{2}-\d{2}$/.test(d) &&
-    new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+  const isoOk = d => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+    const t = Date.parse(`${d}T00:00:00Z`);
+    return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === d;
+  };
   if (!isoOk(String(fm.finished)) || (rawDate && rawDate !== fm.finished))
     fail(f, `кривая дата finished: ${rawDate ?? fm.finished}`);
   if (!Number.isFinite(fm.hours) || fm.hours < 0) fail(f, `hours должно быть числом: ${fm.hours}`);
@@ -55,6 +58,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     fail(f, "нужен score 1–10 — или dropped: true");
   if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
     fail(f, `clip должен быть store, none или media/…: ${fm.clip}`);
+  if (fm.shots != null && !Array.isArray(fm.shots)) fail(f, `shots должен быть списком: ${fm.shots}`);
 
   let steam = null;
   if (fm.steam) {
@@ -107,7 +111,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     hero: media(fm.hero ?? steam?.hero),
     logo: fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
     poster: fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
-    shots: (fm.shots ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
+    shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
     clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? media(fm.clip) : steam?.micro ?? null,
     dropped,
     html: mdToHtml(main.trim()),

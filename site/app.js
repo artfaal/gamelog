@@ -17,7 +17,9 @@ document.addEventListener("click", e => {
     const span = document.createElement("span");
     span.className = "spoiler open";
     span.innerHTML = btn.firstElementChild.innerHTML;
+    span.tabIndex = -1;
     btn.replaceWith(span);
+    span.focus();
     return;
   }
   const reveal = e.target.closest("button.reveal");
@@ -28,6 +30,7 @@ document.addEventListener("click", e => {
       el.removeAttribute("aria-hidden"); el.removeAttribute("inert");
     });
     reveal.remove();
+    fig.querySelector(".shotbtn")?.focus();
   }
 });
 
