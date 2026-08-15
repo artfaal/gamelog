@@ -55,10 +55,11 @@ lb.addEventListener("click", () => lb.close());  // клик в любом ме�
 lb.addEventListener("close", () => { lbImg.src = ""; });
 
 // — видео: играет в кадре, пауза вне; ручная пауза уважается —
-if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+{
+  const autoplay = !matchMedia("(prefers-reduced-motion: reduce)").matches;
   const vio = new IntersectionObserver(es => es.forEach(e => {
     const v = e.target;
-    if (e.isIntersecting) { if (!v.dataset.manual) v.play().catch(() => {}); }
+    if (e.isIntersecting) { if (autoplay && !v.dataset.manual) v.play().catch(() => {}); }
     else if (!v.paused) { v.dataset.io = "1"; v.pause(); }
   }), { threshold: 0.35 });
   document.querySelectorAll("video.clip").forEach(v => {
@@ -76,8 +77,12 @@ const spy = new IntersectionObserver(es => {
   es.forEach(e => {
     if (!e.isIntersecting) return;
     const i = e.target.dataset.nav;
-    document.querySelectorAll("[data-nav-to]").forEach(a =>
-      a.classList.toggle("on", a.dataset.navTo === i));
+    document.querySelectorAll("[data-nav-to]").forEach(a => {
+      const on = a.dataset.navTo === i;
+      a.classList.toggle("on", on);
+      if (on) a.setAttribute("aria-current", "location");
+      else a.removeAttribute("aria-current");
+    });
   });
 }, { rootMargin: "-35% 0px -55% 0px" });
 document.querySelectorAll("[data-nav]").forEach(el => spy.observe(el));

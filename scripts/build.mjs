@@ -35,6 +35,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   const parsed = matter(readFileSync(`content/${f}`, "utf8"));
   const { data: fm, content: body } = parsed;
   if (fm.draft && !DRAFTS) continue;
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    console.error(`✗ content/${f}: имя файла не годится для слага (a-z, 0-9, дефисы)`);
+    process.exit(1);
+  }
   // ошибки драфта не валят сборку — драфт просто пропускается с предупреждением
   const errs = [];
   const fail = (_f, msg) => errs.push(msg);
@@ -59,6 +63,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
     fail(f, `clip должен быть store, none или media/…: ${fm.clip}`);
   if (fm.shots != null && !Array.isArray(fm.shots)) fail(f, `shots должен быть списком: ${fm.shots}`);
+  if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail(f, "нужен verdict — одна строка вердикта");
 
   let steam = null;
   if (fm.steam) {
@@ -73,7 +78,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     }
     const ref = String(p).replace(/^\.\//, "");
     if (/^https?:\/\//.test(ref)) return ref;
-    if (!ref.startsWith("media/")) { fail(f, `медиа-ссылка должна быть номером скрина, https://… или media/…: ${p}`); return null; }
+    if (!ref.startsWith("media/") || ref.includes("..")) { fail(f, `медиа-ссылка должна быть номером скрина, https://… или media/…: ${p}`); return null; }
     if (!existsSync(`content/${ref}`) || !statSync(`content/${ref}`).isFile())
       { fail(f, `нет файла content/${ref}`); return null; }
     return ref;
@@ -180,7 +185,7 @@ const entryHtml = (e, i) => {
   const mediaPanel = e.dropped || (!e.clip && !e.shots.length) ? "" : `
     <div class="glass glass--media">
       ${clipHtml(e)}
-      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(s, `Кадр из ${e.name}`)).join("")}</div>` : ""}
+      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map((s, n) => shotHtml(s, `Кадр ${n + 1} из ${e.name}`)).join("")}</div>` : ""}
     </div>`;
   return `
   <article class="stage" id="${esc(e.slug)}" data-nav="${i}">
@@ -210,7 +215,7 @@ entries.forEach((e, i) => {
 });
 const tocHtml = [...byYear].map(([y, items]) => `
   <section class="tocd__year">
-    <h5 class="mono">${y}</h5>
+    <h3 class="mono">${y}</h3>
     <div class="tocd__grid">${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}"
          aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : ""}">
@@ -230,12 +235,14 @@ const page = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Хроника</title>
 <meta name="description" content="Игровой дневник: ${ruGames(games)}, ${ruHours(hours)}.">
+<meta property="og:type" content="website">
 <meta property="og:title" content="Хроника">
 <meta property="og:description" content="Игровой дневник: впечатления, кадры, воспоминания.">
-${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}">` : ""}
+${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}">
+<meta property="og:image:alt" content="Обложка: ${esc(entries[0].name)}">` : ""}
 <meta property="og:url" content="${SITE}/">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=IBM+Plex+Sans:wght@350;400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body id="top">
@@ -251,7 +258,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 </footer>
 <dialog class="tocd" id="tocd" aria-labelledby="tocd-title">
   <button class="x" id="tocd-x" aria-label="Закрыть">✕</button>
-  <h4 id="tocd-title">Оглавление</h4>
+  <h2 class="tocd__title" id="tocd-title">Оглавление</h2>
   <nav class="tocd__list" id="tocd-list" aria-label="Список игр">${tocHtml}</nav>
 </dialog>
 <dialog class="lb" id="lb" aria-label="Кадр во весь экран">
@@ -270,9 +277,11 @@ const stub = e => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <title>${esc(e.name)} · Хроника</title>
+<meta property="og:type" content="article">
 <meta property="og:title" content="${esc(e.name)} · Хроника">
 <meta property="og:description" content="${esc(e.fm.verdict ?? "")}">
 <meta property="og:image" content="${esc(abs(e.hero))}">
+<meta property="og:image:alt" content="Обложка: ${esc(e.name)}">
 <meta property="og:url" content="${SITE}/e/${esc(e.slug)}/">
 <meta http-equiv="refresh" content="0; url=/#${esc(e.slug)}">
 <link rel="canonical" href="${SITE}/#${esc(e.slug)}">

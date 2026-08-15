@@ -299,8 +299,8 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   max-height: 86dvh;
 }
 .tocd::backdrop { background: var(--color-scrim-strong); }
-.tocd h4 { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
-.tocd__year h5 {
+.tocd .tocd__title { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
+.tocd__year h3 {
   font-family: var(--font-mono);
   font-weight: 400;
   color: var(--color-neutral);
