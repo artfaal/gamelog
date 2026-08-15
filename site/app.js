@@ -36,6 +36,19 @@ document.addEventListener("click", e => {
   }
 });
 
+// — поделиться: системный шэр на мобиле, копирование ссылки на десктопе —
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("button.share");
+  if (!btn) return;
+  const url = `${location.origin}/e/${btn.dataset.slug}/`;
+  if (navigator.share) { navigator.share({ title: btn.dataset.name, url }).catch(() => {}); return; }
+  try { await navigator.clipboard.writeText(url); } catch { return; }
+  const old = btn.textContent;
+  btn.textContent = "скопировано";
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1500);
+});
+
 // — лайтбокс: кадры-кнопки, доступно с клавиатуры —
 const lb = document.getElementById("lb");
 const lbImg = document.getElementById("lb-img");

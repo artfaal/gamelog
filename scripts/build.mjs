@@ -155,6 +155,7 @@ const metaLine = e => {
       : `${s.fm.finished > e.fm.finished ? "вернулся и прошёл" : "прошёл"} в ${String(s.fm.finished).slice(0, 4)}`;
     parts.push(`<a class="rev" href="#${s.slug}">${label} ↗</a>`);
   }
+  parts.push(`<button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}">поделиться</button>`);
   return parts.join(" · ");
 };
 

@@ -188,6 +188,11 @@ h2, h3, h4 {
 
 .drop-tag { color: var(--color-accent); }
 .platform { text-transform: uppercase; }
+.share { all: unset; cursor: pointer; font: inherit; color: var(--color-neutral); }
+.share:hover { color: var(--color-accent); }
+.share:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.share:disabled { color: var(--color-accent); cursor: default; }
+
 .rev { color: var(--color-accent); text-decoration: none; }
 .rev:hover { text-decoration: underline; text-underline-offset: 3px; }
 .rev:active { color: var(--color-ink); }
