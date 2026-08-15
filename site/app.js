@@ -30,7 +30,9 @@ document.addEventListener("click", e => {
       el.removeAttribute("aria-hidden"); el.removeAttribute("inert");
     });
     reveal.remove();
-    fig.querySelector(".shotbtn")?.focus();
+    const target = fig.querySelector(".shotbtn") ?? fig.querySelector("figcaption");
+    if (target && !("focus" in target && target.tabIndex >= 0)) target.tabIndex = -1;
+    target?.focus();
   }
 });
 
