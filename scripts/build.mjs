@@ -243,7 +243,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
   <h1 class="wordmark">Хроника</h1>
   <span class="mono">${ruGames(games)} · ${hours} ч</span>
 </header>
-<button class="toc-btn" id="toc-btn" aria-haspopup="dialog">☰ оглавление</button>
+<button class="toc-btn" id="toc-btn" aria-haspopup="dialog" aria-label="Оглавление">☰<span class="toc-btn__label"> оглавление</span></button>
 <main>${entries.map(entryHtml).join("")}</main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>

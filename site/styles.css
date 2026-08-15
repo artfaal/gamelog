@@ -149,7 +149,7 @@ h2, h3, h4 {
   padding: 0 var(--pad-x) var(--space-3xl);
   margin-top: -14dvh;
   display: grid;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
   justify-items: center;
 }
 .glass {
@@ -161,13 +161,13 @@ h2, h3, h4 {
   width: min(100% - 8rem, 76rem);
   max-width: 76rem;
 }
-.glass .meta { display: block; margin-bottom: var(--space-sm); padding-inline-end: 5rem; }
+.glass .meta { display: block; margin-bottom: var(--space-sm); padding-inline-end: 5rem; color: var(--color-muted); }
 .glass.note { position: relative; }
 .note p { max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
 .verdict {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   line-height: 1.2;
   max-width: 40ch;
   margin-bottom: var(--space-md);
@@ -195,9 +195,13 @@ h2, h3, h4 {
 .glass--media { display: grid; gap: var(--space-md); }
 .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
 .shotbtn { all: unset; display: block; cursor: zoom-in; }
+@media (hover: hover) and (pointer: fine) {
+  .shotbtn img { transition: filter var(--dur-short) var(--ease-out); }
+  .shotbtn:hover img { filter: brightness(1.08); }
+}
 .shotbtn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 .shot { border-radius: var(--radius-sm); width: 100%; }
-.clip { border-radius: var(--radius-sm); width: 100%; }
+.clip { border-radius: var(--radius-sm); width: 100%; accent-color: var(--color-accent); }
 
 /* ———— моменты ———— */
 .moments { display: grid; gap: var(--space-lg); }
@@ -366,7 +370,8 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: 
   .body { margin-top: -10dvh; }
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
-  .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
+  .toc-btn .toc-btn__label { display: none; }
 }
 
 /* ———— reduced motion ———— */
