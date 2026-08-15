@@ -120,6 +120,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? media(fm.clip) : steam?.micro ?? null,
     dropped,
     html: mdToHtml(main.trim()),
+    rawText: main.trim(),
     moments,
   });
   if (errs.length) {
@@ -287,6 +288,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
   <span class="mono">${ruGames(games)} · ${hours} ч</span>
 </header>
 <button class="toc-btn" id="toc-btn" aria-haspopup="dialog" aria-label="Оглавление">☰<span class="toc-btn__label"> оглавление</span></button>
+<button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="toc-btn__label"> наверх</span></button>
 <main>${entries.map(entryHtml).join("")}</main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>
@@ -307,6 +309,20 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 </html>
 `;
 
+// описание для OG-карточки: вердикт + начало текста, без спойлеров и разметки
+const ogDesc = e => {
+  const plain = e.rawText
+    .replace(/\|\|[^|]+\|\|/g, "")                     // спойлеры не утекают в превью
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`#>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const full = `${e.fm.verdict} ${plain}`;
+  if (full.length <= 500) return full;
+  return full.slice(0, full.lastIndexOf(" ", 500)) + "…";
+};
+
 // OG-стаб записи: карточка конкретной игры + мгновенный редирект в ленту
 const stub = e => `<!doctype html>
 <html lang="ru">
@@ -315,7 +331,7 @@ const stub = e => `<!doctype html>
 <title>${esc(e.name)} · Хроника</title>
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(e.name)} · Хроника">
-<meta property="og:description" content="${esc(e.fm.verdict ?? "")}">
+<meta property="og:description" content="${esc(ogDesc(e))}">
 <meta property="og:image" content="${esc(abs(e.hero))}">
 <meta property="og:image:alt" content="Обложка: ${esc(e.name)}">
 <meta property="og:url" content="${SITE}/e/${esc(e.slug)}/">

@@ -347,6 +347,37 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   color: var(--color-accent);
 }
 
+/* ———— кнопка «наверх» ———— */
+.top-btn {
+  position: fixed;
+  bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  right: max(var(--space-md), env(safe-area-inset-right));
+  z-index: var(--z-overlay);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--color-neutral);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out), visibility 0s var(--dur-short);
+}
+.top-btn.show {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+}
+.top-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.top-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
 /* ———— лайтбокс ———— */
 .lb {
   border: none;
@@ -389,7 +420,8 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: 
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
   .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
-  .toc-btn .toc-btn__label { display: none; }
+  .toc-btn .toc-btn__label, .top-btn .toc-btn__label { display: none; }
+  .top-btn { right: auto; left: max(var(--space-md), env(safe-area-inset-left)); bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
 }
 
 /* ———— reduced motion ———— */

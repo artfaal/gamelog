@@ -87,6 +87,16 @@ lb.addEventListener("close", () => { lbImg.src = ""; });
   });
 }
 
+// — «наверх»: появляется, когда шапка ушла из вида —
+const topBtn = document.getElementById("top-btn");
+new IntersectionObserver(es =>
+  topBtn.classList.toggle("show", !es[0].isIntersecting)
+).observe(document.querySelector(".site-head"));
+topBtn.addEventListener("click", () => scrollTo({
+  top: 0,
+  behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+}));
+
 // — scroll-spy: активная запись в оглавлении —
 const spy = new IntersectionObserver(es => {
   es.forEach(e => {
