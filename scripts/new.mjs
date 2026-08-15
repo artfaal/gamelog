@@ -33,7 +33,11 @@ if (movieid) {
   const url = `https://cdn.akamai.steamstatic.com/steam/apps/${movieid}/microtrailer.webm`;
   const head = await fetch(url, { method: "HEAD" }).catch(() => null);
   if (head?.ok) micro = url;
-  else console.warn(`микротрейлер ${movieid} недоступен (${head?.status ?? "сеть"}) — клипа не будет`);
+  else if (head?.status === 404) console.warn(`микротрейлера у ролика ${movieid} нет (404) — клипа не будет`);
+  else {
+    console.error(`проверка микротрейлера сорвалась (${head?.status ?? "сеть"}) — повтори позже`);
+    process.exit(1);
+  }
 }
 const cache = {
   appid: Number(appid),

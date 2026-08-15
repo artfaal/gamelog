@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // build.mjs [--drafts] — собирает dist/ из content/*.md + cache/*.json.
 // Один проход, без вотчеров и инкрементальности: контента десятки записей.
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync, statSync } from "node:fs";
 import matter from "gray-matter";
 import { marked } from "marked";
 
@@ -42,8 +42,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   // YAML отдаёт даты Date-объектом — нормализуем в ISO и сверяем с исходной строкой
   // (невозможную дату 2026-02-31 YAML молча превращает в 2026-03-03)
   if (fm.finished instanceof Date && !isNaN(fm.finished)) fm.finished = fm.finished.toISOString().slice(0, 10);
-  const rawDate = /^finished:\s*"?(\d{4}-\d{2}-\d{2})"?\s*$/m.exec(parsed.matter)?.[1];
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fm.finished)) || (rawDate && rawDate !== fm.finished))
+  const rawDate = /^finished:\s*["']?(\d{4}-\d{2}-\d{2})["']?\s*(?:#.*)?$/m.exec(parsed.matter)?.[1];
+  const isoOk = d => /^\d{4}-\d{2}-\d{2}$/.test(d) &&
+    new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+  if (!isoOk(String(fm.finished)) || (rawDate && rawDate !== fm.finished))
     fail(f, `кривая дата finished: ${rawDate ?? fm.finished}`);
   if (!Number.isFinite(fm.hours) || fm.hours < 0) fail(f, `hours должно быть числом: ${fm.hours}`);
   if (fm.dropped !== undefined && typeof fm.dropped !== "boolean") fail(f, `dropped должен быть true/false: ${fm.dropped}`);
@@ -61,13 +63,16 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   } else if (!fm.hero) fail(f, "нужно поле steam: <appid> — или hero: media/…");
 
   const media = p => {
-    if (typeof p !== "number") {
-      if (typeof p === "string" && p.startsWith("media/") && !existsSync(`content/${p}`))
-        { fail(f, `нет файла content/${p}`); return null; }
-      return p;
+    if (typeof p === "number") {
+      if (!steam || !(p in steam.shots)) { fail(f, `нет магазинного скрина №${p}`); return null; }
+      return steam.shots[p];
     }
-    if (!steam || !(p in steam.shots)) { fail(f, `нет магазинного скрина №${p}`); return null; }
-    return steam.shots[p];
+    const ref = String(p).replace(/^\.\//, "");
+    if (/^https?:\/\//.test(ref)) return ref;
+    if (!ref.startsWith("media/")) { fail(f, `медиа-ссылка должна быть номером скрина, https://… или media/…: ${p}`); return null; }
+    if (!existsSync(`content/${ref}`) || !statSync(`content/${ref}`).isFile())
+      { fail(f, `нет файла content/${ref}`); return null; }
+    return ref;
   };
 
   // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref) / текст)
@@ -158,7 +163,7 @@ const momentsHtml = e => e.moments.length
       <figure class="moment${m.spoiler ? " is-spoiler" : ""}">
         ${m.spoiler ? '<button type="button" class="reveal" aria-label="Спойлер — показать"></button>' : ""}
         ${m.shot ? shotHtml(m.shot, m.alt, m.spoiler) : ""}
-        <figcaption${m.spoiler ? ' aria-hidden="true"' : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
+        <figcaption${m.spoiler ? ' aria-hidden="true" inert' : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
       </figure>`).join("")}</div></div>`
   : "";
 
