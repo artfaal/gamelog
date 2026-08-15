@@ -15,6 +15,10 @@ if (!appid || !/^\d+$/.test(appid) || (si !== -1 && !slugArg)) {
 const res = await fetch(
   `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=english`,
 );
+if (!res.ok) {
+  console.error(`appdetails: HTTP ${res.status}`);
+  process.exit(1);
+}
 const data = (await res.json())[appid]?.data;
 if (!data) {
   console.error(`appdetails: нет данных для ${appid}`);
@@ -23,16 +27,22 @@ if (!data) {
 
 const cdn = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}`;
 const movieid = data.movies?.[0]?.id ?? null;
+// у свежих роликов Steam легаси-файлов нет (404) — проверяем и честно пишем null
+let micro = null;
+if (movieid) {
+  const url = `https://cdn.akamai.steamstatic.com/steam/apps/${movieid}/microtrailer.webm`;
+  const head = await fetch(url, { method: "HEAD" }).catch(() => null);
+  if (head?.ok) micro = url;
+  else console.warn(`микротрейлер ${movieid} недоступен (${head?.status ?? "сеть"}) — клипа не будет`);
+}
 const cache = {
   appid: Number(appid),
   name: data.name,
   hero: `${cdn}/library_hero.jpg`,
   logo: `${cdn}/logo.png`,
-  poster: `${cdn}/library_600x900_2x.jpg`,
+  poster: `${cdn}/library_600x900.jpg`,
   shots: (data.screenshots ?? []).slice(0, 8).map(s => s.path_full),
-  micro: movieid
-    ? `https://cdn.akamai.steamstatic.com/steam/apps/${movieid}/microtrailer.webm`
-    : null,
+  micro,
 };
 writeFileSync(`cache/${appid}.json`, JSON.stringify(cache, null, 2) + "\n");
 console.log(`cache/${appid}.json — ${cache.name}, ${cache.shots.length} скринов`);

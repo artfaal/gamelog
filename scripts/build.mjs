@@ -32,19 +32,27 @@ let broken = false;
 const entries = [];
 for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   const slug = f.replace(/\.md$/, "");
-  const { data: fm, content: body } = matter(readFileSync(`content/${f}`, "utf8"));
+  const parsed = matter(readFileSync(`content/${f}`, "utf8"));
+  const { data: fm, content: body } = parsed;
   if (fm.draft && !DRAFTS) continue;
   // ошибки драфта не валят сборку — драфт просто пропускается с предупреждением
   const errs = [];
   const fail = (_f, msg) => errs.push(msg);
 
-  // YAML отдаёт даты Date-объектом — нормализуем в ISO-строку
+  // YAML отдаёт даты Date-объектом — нормализуем в ISO и сверяем с исходной строкой
+  // (невозможную дату 2026-02-31 YAML молча превращает в 2026-03-03)
   if (fm.finished instanceof Date && !isNaN(fm.finished)) fm.finished = fm.finished.toISOString().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fm.finished))) fail(f, `кривая дата finished: ${fm.finished}`);
+  const rawDate = /^finished:\s*"?(\d{4}-\d{2}-\d{2})"?\s*$/m.exec(parsed.matter)?.[1];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fm.finished)) || (rawDate && rawDate !== fm.finished))
+    fail(f, `кривая дата finished: ${rawDate ?? fm.finished}`);
   if (!Number.isFinite(fm.hours) || fm.hours < 0) fail(f, `hours должно быть числом: ${fm.hours}`);
-  if (fm.dropped && fm.score != null) fail(f, "dropped: true несовместим со score");
-  if (!fm.dropped && !(Number.isInteger(fm.score) && fm.score >= 1 && fm.score <= 10))
+  if (fm.dropped !== undefined && typeof fm.dropped !== "boolean") fail(f, `dropped должен быть true/false: ${fm.dropped}`);
+  const dropped = fm.dropped === true;
+  if (dropped && fm.score != null) fail(f, "dropped: true несовместим со score");
+  if (!dropped && !(Number.isInteger(fm.score) && fm.score >= 1 && fm.score <= 10))
     fail(f, "нужен score 1–10 — или dropped: true");
+  if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
+    fail(f, `clip должен быть store, none или media/…: ${fm.clip}`);
 
   let steam = null;
   if (fm.steam) {
@@ -53,7 +61,11 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   } else if (!fm.hero) fail(f, "нужно поле steam: <appid> — или hero: media/…");
 
   const media = p => {
-    if (typeof p !== "number") return p;
+    if (typeof p !== "number") {
+      if (typeof p === "string" && p.startsWith("media/") && !existsSync(`content/${p}`))
+        { fail(f, `нет файла content/${p}`); return null; }
+      return p;
+    }
     if (!steam || !(p in steam.shots)) { fail(f, `нет магазинного скрина №${p}`); return null; }
     return steam.shots[p];
   };
@@ -63,8 +75,11 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   if (parts.length > 2) fail(f, "секция «## Моменты» должна быть одна");
   const [main, momentsRaw] = parts;
   const moments = [];
-  if (momentsRaw) {
-    for (const chunk of momentsRaw.split(/^### /m).slice(1)) {
+  if (momentsRaw !== undefined) {
+    const chunks = momentsRaw.split(/^### /m);
+    if (chunks[0].trim()) fail(f, "текст между «## Моменты» и первым «### » потеряется — убери его");
+    if (chunks.length === 1) fail(f, "секция «## Моменты» пуста — нужен хотя бы один «### Заголовок»");
+    for (const chunk of chunks.slice(1)) {
       const [head, ...lines] = chunk.split("\n");
       const spoiler = /\{spoiler\}/.test(head);
       const title = head.replace(/\{spoiler\}/, "").trim();
@@ -74,6 +89,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
         if (a) alt = a;
         return "";
       });
+      if (/!\[[^\]]*\]\(/.test(text)) fail(f, `в моменте «${title}» больше одной картинки — оставь одну`);
       moments.push({ title, spoiler, shot, alt, html: mdToHtml(text.trim()) });
     }
   }
@@ -86,9 +102,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     hero: media(fm.hero ?? steam?.hero),
     logo: fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
     poster: fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
-    shots: (fm.shots ?? (steam && !fm.dropped ? [0, 1] : [])).map(media).filter(Boolean),
-    clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? fm.clip : steam?.micro ?? null,
-    dropped: fm.dropped === true,
+    shots: (fm.shots ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
+    clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? media(fm.clip) : steam?.micro ?? null,
+    dropped,
     html: mdToHtml(main.trim()),
     moments,
   });
@@ -135,12 +151,12 @@ const clipHtml = e => e.clip
 
 // кадр — кнопка: лайтбокс доступен с клавиатуры
 const shotHtml = (src, alt, hidden = false) =>
-  `<button type="button" class="shotbtn"><img class="shot" src="${esc(src)}" alt="${esc(alt)}"${hidden ? ' aria-hidden="true"' : ""} loading="lazy" width="1920" height="1080"></button>`;
+  `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}"${hidden ? ' aria-hidden="true"' : ""} loading="lazy" width="1920" height="1080"></button>`;
 
 const momentsHtml = e => e.moments.length
   ? `<div class="glass"><div class="moments"><h4 class="moments__title">Моменты</h4>${e.moments.map(m => `
       <figure class="moment${m.spoiler ? " is-spoiler" : ""}">
-        ${m.spoiler ? '<button type="button" class="reveal">спойлер — показать</button>' : ""}
+        ${m.spoiler ? '<button type="button" class="reveal" aria-label="Спойлер — показать"></button>' : ""}
         ${m.shot ? shotHtml(m.shot, m.alt, m.spoiler) : ""}
         <figcaption${m.spoiler ? ' aria-hidden="true"' : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
       </figure>`).join("")}</div></div>`
@@ -178,7 +194,7 @@ const entryHtml = (e, i) => {
 
 const tocHtml = entries.map((e, i) => `
   <a href="#${esc(e.slug)}" data-nav-to="${i}">
-    <img src="${esc(e.poster ?? e.hero)}" alt="" loading="lazy" width="600" height="900">
+    <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
     <span class="nm">${esc(e.name)}</span>
     <span class="mono">${e.dropped ? '<span class="drop-tag">дроп</span> · ' : ""}${String(e.fm.finished).slice(0, 4)}</span>
   </a>`).join("");

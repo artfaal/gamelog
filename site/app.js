@@ -24,7 +24,9 @@ document.addEventListener("click", e => {
   if (reveal) {
     const fig = reveal.closest(".moment");
     fig.classList.add("open");
-    fig.querySelectorAll("[aria-hidden]").forEach(el => el.removeAttribute("aria-hidden"));
+    fig.querySelectorAll("[aria-hidden], [inert]").forEach(el => {
+      el.removeAttribute("aria-hidden"); el.removeAttribute("inert");
+    });
     reveal.remove();
   }
 });
@@ -44,7 +46,7 @@ document.addEventListener("click", e => {
   lb.showModal();
 });
 document.getElementById("lb-x").addEventListener("click", () => lb.close());
-lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
+lb.addEventListener("click", () => lb.close());  // клик в любом месте закрывает
 lb.addEventListener("close", () => { lbImg.src = ""; });
 
 // — видео: играет в кадре, пауза вне; ручная пауза уважается —

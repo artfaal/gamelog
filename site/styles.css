@@ -105,9 +105,9 @@ h2, h3, h4 {
 }
 .site-head .mono { white-space: nowrap; }
 .site-foot {
-  padding: var(--space-3xl) var(--pad-x) var(--space-xl);
+  padding: var(--space-2xl) var(--pad-x);
   border-top: 1px solid var(--color-rule);
-  margin-top: var(--space-3xl);
+  text-align: center;
 }
 .site-foot p {
   font-family: var(--font-display);
@@ -115,6 +115,7 @@ h2, h3, h4 {
   color: var(--color-muted);
   max-width: 28ch;
   line-height: 1.25;
+  margin-inline: auto;
 }
 .site-foot .mono { margin-top: var(--space-md); display: block; }
 .site-foot a:hover { color: var(--color-accent); }
@@ -238,11 +239,19 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   display: grid;
   place-content: center;
   cursor: pointer;
+}
+.reveal::after {
+  content: "спойлер — показать";
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   letter-spacing: 0.02em;
   color: var(--color-accent);
+  background: var(--color-scrim-strong);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-lg);
 }
+.reveal:hover::after { color: var(--color-ink); border-color: var(--color-neutral); }
 .reveal:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; border-radius: var(--radius-sm); }
 
 .sr-only {
@@ -262,16 +271,16 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   letter-spacing: 0.02em;
-  color: var(--color-muted);
+  color: var(--color-ink);
   background: var(--color-scrim-strong);
   backdrop-filter: blur(6px);
-  border: 1px solid var(--color-rule);
+  border: 1px solid var(--color-neutral);
   border-radius: var(--radius-md);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   cursor: pointer;
   white-space: nowrap;
 }
-.toc-btn:hover { color: var(--color-ink); }
+.toc-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .tocd {
   border: 1px solid var(--color-rule);
   background: var(--color-paper-2);
