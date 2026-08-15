@@ -16,6 +16,7 @@
   --color-focus:    oklch(80% 0.16 75);
   --color-scrim:    oklch(10% 0.008 70);
   --color-scrim-strong: oklch(10% 0.008 70 / 0.85);
+  --color-scrim-solid:  oklch(11% 0.008 70 / 0.96);
   --color-scrim-mid:    oklch(10% 0.008 70 / 0.55);
   --color-scrim-0:      oklch(10% 0.008 70 / 0);
 
@@ -121,8 +122,8 @@ h2, h3, h4 {
 .site-foot a:hover { color: var(--color-accent); }
 
 /* ———— запись: sticky-обои + панели по центру ———— */
-.hero { position: sticky; top: 0; height: 100dvh; overflow: clip; }
-.hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero { position: sticky; top: 0; height: 100svh; overflow: clip; }
+.hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .hero::after {
   content: "";
   position: absolute; inset: 0;
@@ -132,7 +133,7 @@ h2, h3, h4 {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: clamp(5rem, 20dvh, 12rem);
+  bottom: clamp(5rem, 20svh, 12rem);
   z-index: var(--z-raised);
 }
 .hero .logo { max-height: 88px; max-width: min(60vw, 360px); width: auto; object-fit: contain; }
@@ -147,7 +148,7 @@ h2, h3, h4 {
   position: relative;
   z-index: var(--z-raised);
   padding: 0 var(--pad-x) var(--space-3xl);
-  margin-top: -14dvh;
+  margin-top: -14svh;
   display: grid;
   gap: var(--space-xl);
   justify-items: center;
@@ -361,13 +362,14 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: 
 /* ———— мобилка ———— */
 @media (max-width: 48rem) {
   .site-head { padding-inline-end: var(--pad-x); }
-  .glass { width: 100%; padding: var(--space-md); }
+  .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
+  .toc-btn, .tocd, .reveal::after { backdrop-filter: none; }
   .glass .meta { padding-inline-end: 3.5rem; }
   .score { top: var(--space-md); right: var(--space-md); }
   .score .n { font-size: var(--text-xl); }
   .hero .logo { max-height: 60px; }
   .hero .logo-text { font-size: var(--text-xl); }
-  .body { margin-top: -10dvh; }
+  .body { margin-top: -10svh; }
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
   .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
