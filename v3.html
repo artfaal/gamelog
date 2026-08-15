@@ -1,0 +1,347 @@
+<!doctype html>
+<!-- PROTOTYPE · итерация 3: D|H|F|I|G|J (?variant=), стрелки ← → переключают.
+     Пары для сравнения: D→H (окна на обоях), F→I (свиток поверх обоев), G→J (wallpaper за потоком).
+     Итерация 1 — v1.html, итерация 2 (с вариантом E) — v2.html -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Хроника · прототип 3</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style2.css">
+</head>
+<body id="top">
+
+<header class="site-head">
+  <a class="wordmark" href="index.html">Хроника</a>
+  <span class="mono" id="head-count"></span>
+</header>
+
+<main id="app"></main>
+
+<footer class="site-foot">
+  <p>Игры заканчиваются. Воспоминания — нет.</p>
+  <span class="mono">Прототип · данные и тексты — заглушки · ассеты Steam</span>
+</footer>
+
+<dialog class="lb" id="lb">
+  <button class="x" id="lb-x" aria-label="Закрыть">✕</button>
+  <img id="lb-img" alt="">
+  <p class="mono cap" id="lb-cap"></p>
+</dialog>
+
+<div class="proto-switch" role="group" aria-label="Переключатель вариантов прототипа">
+  <button type="button" id="sw-prev" aria-label="Предыдущий вариант">←</button>
+  <span class="proto-switch__label" id="sw-label"></span>
+  <button type="button" id="sw-next" aria-label="Следующий вариант">→</button>
+</div>
+
+<script src="data.js"></script>
+<script>
+const VARIANTS = [
+  { key: "D", name: "Развороты" },
+  { key: "H", name: "Окна" },
+  { key: "F", name: "Наплывы" },
+  { key: "I", name: "Свиток" },
+  { key: "G", name: "Поток" },
+  { key: "J", name: "Поток II" },
+];
+const DEFAULT_VARIANT = "H";
+
+const totalHours = GAMES.reduce((s, g) => s + g.hours, 0);
+document.getElementById("head-count").textContent = `${GAMES.length} игр · ${totalHours} ч`;
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const metaLine = g => `${ruDate(g.finished)} · ${g.hours} ч · ${g.score}/10`;
+const noteHtml = g => (NOTES[g.appid] ?? []).map(p => `<p>${p}</p>`).join("");
+const clip = g => g.micro
+  ? `<video class="clip" src="${g.micro}" muted loop playsinline preload="none"
+       poster="${g.shots[4] ?? g.shots[0]}" aria-label="Микротрейлер ${esc(g.name)} — клик ставит на паузу"></video>`
+  : "";
+const shotImg = (g, idx, extra = "") => `<img class="shot" src="${g.shots[idx]}"
+  alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080" ${extra}>`;
+
+const momentsHtml = g => {
+  const ms = MOMENTS[g.appid];
+  if (!ms) return "";
+  return `<div class="moments"><h4 class="moments__title">Моменты</h4>` + ms.map(m => `
+    <figure class="moment">
+      <img class="shot" src="${g.shots[m.shot]}" alt="${esc(m.t)}" loading="lazy" width="1920" height="1080">
+      <figcaption><strong>${m.t}</strong><p>${m.p}</p></figcaption>
+    </figure>`).join("") + `</div>`;
+};
+
+const railHtml = (vcls, prefix) => {
+  let html = `<nav class="rail ${vcls}" aria-label="Навигация по играм">`;
+  let ry = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    if (y !== ry) { ry = y; html += `<span class="yr mono">${y}</span>`; }
+    html += `<a href="#${prefix}-${g.appid}" data-nav-to="${i}" aria-label="${esc(g.name)}" title="${esc(g.name)}"></a>`;
+  });
+  return html + `</nav>`;
+};
+
+const stripHtml = (vcls, prefix) => {
+  let html = `<nav class="strip ${vcls}" aria-label="Кинолента-навигация">`;
+  GAMES.forEach((g, i) => {
+    html += `<a href="#${prefix}-${g.appid}" data-nav-to="${i}" aria-label="${esc(g.name)}" title="${esc(g.name)}">
+      <img src="${g.poster}" alt="" loading="lazy" width="600" height="900"></a>`;
+  });
+  return html + `</nav>`;
+};
+
+/* — D · Развороты — */
+function renderD() {
+  let html = `<section class="vd" aria-label="Развороты">`;
+  let year = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    if (y !== year) { year = y; html += `<h2 class="jour__year">${y}</h2>`; }
+    const extra = MOMENTS[g.appid] ? `<div class="jour__extra">${momentsHtml(g)}</div>` : "";
+    html += `
+    <article class="jour" id="d-${g.appid}" data-nav="${i}">
+      <div class="jour__hero">
+        <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+      </div>
+      <div class="jour__body">
+        <div class="note">
+          <span class="mono meta">${metaLine(g)}</span>
+          <h3 class="verdict">${g.verdict}</h3>
+          ${noteHtml(g)}
+        </div>
+        <div class="jour__media">
+          ${clip(g)}
+          <div class="pair">${shotImg(g, 0)}${shotImg(g, 1)}</div>
+        </div>
+      </div>
+      ${extra}
+    </article>`;
+  });
+  return html + `</section>` + railHtml("vd", "d");
+}
+
+/* — H · Окна: игра = экран, контент плашками прямо на обоине — */
+function renderH() {
+  let html = `<section class="vh" aria-label="Окна">`;
+  GAMES.forEach((g, i) => {
+    const moments = MOMENTS[g.appid] ? `<div class="win win--moments">${momentsHtml(g)}</div>` : "";
+    html += `
+    <article class="pane" id="h-${g.appid}" data-nav="${i}">
+      <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+      <div class="pane__grid">
+        <div class="win note">
+          <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+          <span class="mono meta">${metaLine(g)}</span>
+          <h3 class="verdict">${g.verdict}</h3>
+          ${noteHtml(g)}
+        </div>
+        <div class="win win--media">
+          ${clip(g)}
+          <div class="pair">${shotImg(g, 0)}${shotImg(g, 1)}</div>
+        </div>
+        ${moments}
+      </div>
+    </article>`;
+  });
+  return html + `</section>` + railHtml("vh", "h");
+}
+
+/* — F · Наплывы — */
+function renderF() {
+  let html = `<section class="vf cine" aria-label="Наплывы">`;
+  GAMES.forEach((g, i) => {
+    html += `
+    <article class="stage" id="f-${g.appid}" data-nav="${i}">
+      <div class="cine__hero">
+        <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+      </div>
+      <div class="cine__body">
+        <div class="cine__cols">
+          <div class="note">
+            <span class="mono meta">${metaLine(g)}</span>
+            <h3 class="verdict">${g.verdict}</h3>
+            ${noteHtml(g)}
+          </div>
+          <div class="cine__media">
+            ${clip(g)}
+            ${shotImg(g, 0)}
+          </div>
+        </div>
+        ${momentsHtml(g)}
+      </div>
+    </article>`;
+  });
+  return html + `</section>` + stripHtml("vf", "f");
+}
+
+/* — I · Свиток: обои приклеены, запись плывёт поверх стеклянными панелями — */
+function renderI() {
+  let html = `<section class="vi" aria-label="Свиток">`;
+  GAMES.forEach((g, i) => {
+    const moments = MOMENTS[g.appid] ? `<div class="glass">${momentsHtml(g)}</div>` : "";
+    html += `
+    <article class="stage" id="i-${g.appid}" data-nav="${i}">
+      <div class="iflow__hero">
+        <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+      </div>
+      <div class="iflow__body">
+        <div class="glass note">
+          <span class="mono meta">${metaLine(g)}</span>
+          <h3 class="verdict">${g.verdict}</h3>
+          ${noteHtml(g)}
+        </div>
+        <div class="glass glass--media">
+          ${clip(g)}
+          <div class="pair">${shotImg(g, 0)}${shotImg(g, 1)}</div>
+        </div>
+        ${moments}
+      </div>
+    </article>`;
+  });
+  return html + `</section>` + stripHtml("vi", "i");
+}
+
+/* — G · Поток — */
+function magEntries(prefix) {
+  let html = "";
+  let year = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    const anchor = y !== year ? `id="${prefix}-y${y}"` : "";
+    year = y;
+    html += `
+    <article class="mag__entry" ${anchor} data-nav="${i}" data-year="${y}">
+      <div class="mag__text note">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+        <span class="mono meta">${metaLine(g)}</span>
+        <h3 class="verdict">${g.verdict}</h3>
+        ${noteHtml(g)}
+      </div>
+      <div class="mag__media">
+        ${clip(g)}
+        <div class="pair">${shotImg(g, 0)}${shotImg(g, 1)}</div>
+      </div>
+      ${momentsHtml(g)}
+    </article>`;
+  });
+  return html;
+}
+
+function yearbarHtml(prefix) {
+  const years = [...new Set(GAMES.map(g => g.finished.slice(0, 4)))];
+  return `<nav class="yearbar" aria-label="Годы">
+    ${years.map(y => `<a href="#${prefix}-y${y}" data-year="${y}">${y}</a>`).join("")}
+    <a href="#top">наверх ↑</a>
+  </nav>`;
+}
+
+function renderG() {
+  return `<section class="vg" aria-label="Поток">${yearbarHtml("g")}<div class="mag">${magEntries("g")}</div></section>`;
+}
+
+/* — J · Поток II: fixed-wallpaper активной игры за контентом — */
+function renderJ() {
+  return `<section class="vj" aria-label="Поток на обоях">
+    <div class="jbg" aria-hidden="true"><img class="a" alt=""><img class="b" alt=""></div>
+    <div class="jwrap">${yearbarHtml("j")}<div class="mag">${magEntries("j")}</div></div>
+  </section>`;
+}
+
+document.getElementById("app").innerHTML =
+  renderD() + renderH() + renderF() + renderI() + renderG() + renderJ();
+
+/* — фон варианта J: crossfade на активную игру — */
+const jbgA = document.querySelector(".jbg .a");
+const jbgB = document.querySelector(".jbg .b");
+let jCur = -1, jFlip = false;
+function setJBg(i) {
+  if (i === jCur) return;
+  jCur = i;
+  const [show, hide] = jFlip ? [jbgA, jbgB] : [jbgB, jbgA];
+  jFlip = !jFlip;
+  show.src = GAMES[i].hero;
+  show.classList.add("on");
+  hide.classList.remove("on");
+}
+
+/* — видео: play в кадре / pause вне; клик — вручную; reduced-motion — только клик — */
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clips = document.querySelectorAll("video.clip");
+clips.forEach(v => v.addEventListener("click", () => { v.paused ? v.play() : v.pause(); v.dataset.manual = "1"; }));
+if (!reduceMotion) {
+  const vio = new IntersectionObserver(es => es.forEach(e => {
+    const v = e.target;
+    if (v.dataset.manual) return;
+    if (e.isIntersecting) v.play(); else v.pause();
+  }), { threshold: 0.35 });
+  clips.forEach(v => vio.observe(v));
+}
+
+/* — лайтбокс: клик по скрину открывает фулл-сайз — */
+const lb = document.getElementById("lb");
+const lbImg = document.getElementById("lb-img");
+const lbCap = document.getElementById("lb-cap");
+document.addEventListener("click", e => {
+  const im = e.target.closest("img.shot");
+  if (!im || lb.open) return;
+  lbImg.src = im.src;
+  lbImg.alt = im.alt;
+  lbCap.textContent = im.alt;
+  lb.showModal();
+});
+document.getElementById("lb-x").addEventListener("click", () => lb.close());
+lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
+lb.addEventListener("close", () => { lbImg.src = ""; });
+
+/* — scroll-spy: подсветка навигации + фон J — */
+const spy = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const i = e.target.dataset.nav;
+    if (i !== undefined) {
+      document.querySelectorAll("[data-nav-to]").forEach(a =>
+        a.classList.toggle("on", a.dataset.navTo === i));
+      if (e.target.closest(".vj")) setJBg(Number(i));
+    }
+    const y = e.target.dataset.year;
+    if (y) document.querySelectorAll(".yearbar a[data-year]").forEach(a =>
+      a.classList.toggle("on", a.dataset.year === y));
+  });
+}, { rootMargin: "-35% 0px -55% 0px" });
+document.querySelectorAll("[data-nav]").forEach(el => spy.observe(el));
+
+/* — свитчер (прототип) — */
+function currentIdx() {
+  const key = (new URLSearchParams(location.search).get("variant") ?? DEFAULT_VARIANT).toUpperCase();
+  const i = VARIANTS.findIndex(v => v.key === key);
+  return i === -1 ? 0 : i;
+}
+function applyVariant(i) {
+  const v = VARIANTS[i];
+  document.body.className = "v-" + v.key.toLowerCase();
+  document.getElementById("sw-label").textContent = `${v.key} — ${v.name}`;
+  const url = new URL(location);
+  url.searchParams.set("variant", v.key);
+  history.replaceState(null, "", url);
+  clips.forEach(cv => { delete cv.dataset.manual; cv.pause(); });
+}
+function cycle(d) {
+  applyVariant((currentIdx() + d + VARIANTS.length) % VARIANTS.length);
+  scrollTo({ top: 0, behavior: "instant" });
+}
+document.getElementById("sw-prev").addEventListener("click", () => cycle(-1));
+document.getElementById("sw-next").addEventListener("click", () => cycle(1));
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") cycle(-1);
+  if (e.key === "ArrowRight") cycle(1);
+});
+applyVariant(currentIdx());
+</script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!doctype html>
+<!-- PROTOTYPE · итерация 2: одностраничные варианты D|E|F|G (?variant=), стрелки ← → переключают.
+     Итерация 1 (A|B|C + детальная) сохранена в v1.html -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Хроника · прототип 2</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style2.css">
+</head>
+<body id="top">
+
+<header class="site-head">
+  <a class="wordmark" href="index.html">Хроника</a>
+  <span class="mono" id="head-count"></span>
+</header>
+
+<main id="app"></main>
+
+<footer class="site-foot">
+  <p>Игры заканчиваются. Воспоминания — нет.</p>
+  <span class="mono">Прототип · данные и тексты — заглушки · ассеты Steam</span>
+</footer>
+
+<div class="proto-switch" role="group" aria-label="Переключатель вариантов прототипа">
+  <button type="button" id="sw-prev" aria-label="Предыдущий вариант">←</button>
+  <span class="proto-switch__label" id="sw-label"></span>
+  <button type="button" id="sw-next" aria-label="Следующий вариант">→</button>
+</div>
+
+<script src="data.js"></script>
+<script>
+const VARIANTS = [
+  { key: "D", name: "Развороты" },
+  { key: "E", name: "Оглавление" },
+  { key: "F", name: "Наплывы" },
+  { key: "G", name: "Поток" },
+];
+
+const totalHours = GAMES.reduce((s, g) => s + g.hours, 0);
+document.getElementById("head-count").textContent = `${GAMES.length} игр · ${totalHours} ч`;
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const metaLine = g => `${ruDate(g.finished)} · ${g.hours} ч · ${g.score}/10`;
+const noteHtml = g => (NOTES[g.appid] ?? []).map(p => `<p>${p}</p>`).join("");
+const clip = (g, eager) => g.micro
+  ? `<video class="clip" src="${g.micro}" muted loop playsinline preload="none"
+       poster="${g.shots[4] ?? g.shots[0]}" aria-label="Микротрейлер ${esc(g.name)} — клик ставит на паузу"></video>`
+  : "";
+
+/* — D · Развороты: hero-полоса + запись под ней, рейка-точки справа — */
+function renderD() {
+  let html = `<section class="vd" aria-label="Развороты">`;
+  let year = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    if (y !== year) { year = y; html += `<h2 class="jour__year" id="d-y${y}">${y}</h2>`; }
+    html += `
+    <article class="jour" id="d-${g.appid}" data-nav="${i}">
+      <div class="jour__hero">
+        <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+      </div>
+      <div class="jour__body">
+        <div class="note">
+          <span class="mono meta">${metaLine(g)}</span>
+          <h3 class="verdict">${g.verdict}</h3>
+          ${noteHtml(g)}
+        </div>
+        <div class="jour__media">
+          ${clip(g)}
+          <div class="pair">
+            <img class="shot" src="${g.shots[0]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+            <img class="shot" src="${g.shots[1]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+          </div>
+        </div>
+      </div>
+    </article>`;
+  });
+  html += `</section>
+  <nav class="rail vd" aria-label="Навигация по играм">`;
+  let ry = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    if (y !== ry) { ry = y; html += `<span class="yr mono">${y}</span>`; }
+    html += `<a href="#d-${g.appid}" data-nav-to="${i}" aria-label="${esc(g.name)}" title="${esc(g.name)}"></a>`;
+  });
+  return html + `</nav>`;
+}
+
+/* — E · Оглавление: sticky-список слева, лента записей справа — */
+function renderE() {
+  let toc = `<nav class="toc" aria-label="Оглавление">`;
+  let feed = `<div class="split__feed">`;
+  GAMES.forEach((g, i) => {
+    toc += `
+    <a href="#e-${g.appid}" data-nav-to="${i}">
+      <img src="${g.poster}" alt="" loading="lazy" width="600" height="900">
+      <span><span class="nm">${esc(g.name)}</span><span class="mono">${ruDate(g.finished)}</span></span>
+    </a>`;
+    feed += `
+    <article class="card" id="e-${g.appid}" data-nav="${i}">
+      <div class="card__hero">
+        <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+      </div>
+      <span class="mono meta">${metaLine(g)}</span>
+      <div class="note">
+        <h3 class="verdict">${g.verdict}</h3>
+        ${noteHtml(g)}
+      </div>
+      <div class="pair">
+        <img class="shot" src="${g.shots[0]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+        <img class="shot" src="${g.shots[1]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+      </div>
+    </article>`;
+  });
+  return `<section class="ve" aria-label="Оглавление и лента"><div class="split">${toc}</nav>${feed}</div></div></section>`;
+}
+
+/* — F · Наплывы: sticky hero на весь экран, запись наезжает, кинолента снизу — */
+function renderF() {
+  let html = `<section class="vf cine" aria-label="Наплывы">`;
+  GAMES.forEach((g, i) => {
+    html += `
+    <article class="stage" id="f-${g.appid}" data-nav="${i}">
+      <div class="cine__hero">
+        <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+      </div>
+      <div class="cine__body">
+        <div class="cine__cols">
+          <div class="note">
+            <span class="mono meta">${metaLine(g)}</span>
+            <h3 class="verdict">${g.verdict}</h3>
+            ${noteHtml(g)}
+          </div>
+          <div class="cine__media">
+            ${clip(g)}
+            <img class="shot" src="${g.shots[0]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+          </div>
+        </div>
+      </div>
+    </article>`;
+  });
+  html += `</section>
+  <nav class="strip vf" aria-label="Кинолента-навигация">`;
+  GAMES.forEach((g, i) => {
+    html += `<a href="#f-${g.appid}" data-nav-to="${i}" aria-label="${esc(g.name)}" title="${esc(g.name)}">
+      <img src="${g.poster}" alt="" loading="lazy" width="600" height="900"></a>`;
+  });
+  return html + `</nav>`;
+}
+
+/* — G · Поток: журнальная сетка, sticky-шкала годов — */
+function renderG() {
+  const years = [...new Set(GAMES.map(g => g.finished.slice(0, 4)))];
+  let html = `<section class="vg" aria-label="Поток">
+  <nav class="yearbar" aria-label="Годы">
+    ${years.map(y => `<a href="#g-y${y}" data-year="${y}">${y}</a>`).join("")}
+    <a href="#top">наверх ↑</a>
+  </nav>
+  <div class="mag">`;
+  let year = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    const anchor = y !== year ? `id="g-y${y}"` : "";
+    year = y;
+    html += `
+    <article class="mag__entry" ${anchor} data-nav="${i}" data-year="${y}">
+      <div class="mag__text note">
+        <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+        <span class="mono meta">${metaLine(g)}</span>
+        <h3 class="verdict">${g.verdict}</h3>
+        ${noteHtml(g)}
+      </div>
+      <div class="mag__media">
+        ${clip(g)}
+        <div class="pair">
+          <img class="shot" src="${g.shots[0]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+          <img class="shot" src="${g.shots[1]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+        </div>
+      </div>
+    </article>`;
+  });
+  return html + `</div></section>`;
+}
+
+document.getElementById("app").innerHTML = renderD() + renderE() + renderF() + renderG();
+
+/* — видео: play в кадре / pause вне кадра; клик — вручную; reduced-motion — только клик — */
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clips = document.querySelectorAll("video.clip");
+clips.forEach(v => v.addEventListener("click", () => { v.paused ? v.play() : v.pause(); v.dataset.manual = "1"; }));
+if (!reduceMotion) {
+  const vio = new IntersectionObserver(es => es.forEach(e => {
+    const v = e.target;
+    if (v.dataset.manual) return;
+    if (e.isIntersecting) v.play(); else v.pause();
+  }), { threshold: 0.35 });
+  clips.forEach(v => vio.observe(v));
+}
+
+/* — scroll-spy: подсветка активного пункта навигации текущего варианта — */
+const spy = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const i = e.target.dataset.nav;
+    document.querySelectorAll("[data-nav-to]").forEach(a =>
+      a.classList.toggle("on", a.dataset.navTo === i));
+    const y = e.target.dataset.year;
+    if (y) document.querySelectorAll(".yearbar a[data-year]").forEach(a =>
+      a.classList.toggle("on", a.dataset.year === y));
+  });
+}, { rootMargin: "-35% 0px -55% 0px" });
+document.querySelectorAll("[data-nav]").forEach(el => spy.observe(el));
+
+/* — свитчер (прототип) — */
+function currentIdx() {
+  const key = (new URLSearchParams(location.search).get("variant") ?? "D").toUpperCase();
+  const i = VARIANTS.findIndex(v => v.key === key);
+  return i === -1 ? 0 : i;
+}
+function applyVariant(i) {
+  const v = VARIANTS[i];
+  document.body.className = "v-" + v.key.toLowerCase();
+  document.getElementById("sw-label").textContent = `${v.key} — ${v.name}`;
+  const url = new URL(location);
+  url.searchParams.set("variant", v.key);
+  history.replaceState(null, "", url);
+  clips.forEach(cv => { delete cv.dataset.manual; cv.pause(); });
+}
+function cycle(d) {
+  applyVariant((currentIdx() + d + VARIANTS.length) % VARIANTS.length);
+  scrollTo({ top: 0, behavior: "instant" });
+}
+document.getElementById("sw-prev").addEventListener("click", () => cycle(-1));
+document.getElementById("sw-next").addEventListener("click", () => cycle(1));
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") cycle(-1);
+  if (e.key === "ArrowRight") cycle(1);
+});
+applyVariant(currentIdx());
+</script>
+</body>
+</html>

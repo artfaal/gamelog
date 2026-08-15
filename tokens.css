@@ -1,0 +1,75 @@
+/* Hallmark · genre: atmospheric · macrostructure: Photographic / Catalogue / Marquee Hero (прототип, 3 варианта)
+ * theme: custom (vibe: "тёмный кинозал, янтарное свечение, хроника значимого"
+ *   · paper oklch(13% 0.008 70) · accent oklch(78% 0.14 75) amber
+ *   · Cormorant Garamond + IBM Plex Sans + JetBrains Mono — кириллица обязательна)
+ * axes: dark / classical-serif / warm · enrichment: реальные Steam-ассеты (hero/poster/logo/microtrailer)
+ * nav: N9 edge-aligned · footer: Ft5 statement
+ * deviation: parallax на детальной странице — явный запрос пользователя, с reduced-motion фолбэком
+ * Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V5
+ */
+:root {
+  /* — цвет: тёплая тёмная нейтраль, один янтарный акцент — */
+  --color-paper:    oklch(13% 0.008 70);
+  --color-paper-2:  oklch(16% 0.010 70);
+  --color-paper-3:  oklch(19% 0.012 70);
+  --color-rule:     oklch(28% 0.010 70);
+  --color-neutral:  oklch(60% 0.010 70);
+  --color-muted:    oklch(72% 0.008 75);
+  --color-ink:      oklch(94% 0.006 80);
+  --color-accent:   oklch(78% 0.14 75);
+  --color-focus:    oklch(80% 0.16 75);
+  --color-scrim:    oklch(10% 0.008 70);
+  --color-scrim-strong: oklch(10% 0.008 70 / 0.85);
+  --color-scrim-mid:    oklch(10% 0.008 70 / 0.55);
+  --color-scrim-faint:  oklch(10% 0.008 70 / 0.1);
+  --color-scrim-0:      oklch(10% 0.008 70 / 0);
+  /* прототипный свитчер — намеренно вне палитры дизайна */
+  --proto-bg:     oklch(22% 0 0 / 0.92);
+  --proto-rule:   oklch(45% 0 0);
+  --proto-ink:    oklch(90% 0 0);
+  --proto-focus:  oklch(80% 0 0);
+
+  /* — шрифты: 2+1, все с кириллицей — */
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-body:    "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* — шкала 1.25 — */
+  --text-xs:   0.8rem;
+  --text-sm:   0.9rem;
+  --text-base: 1rem;
+  --text-md:   1.25rem;
+  --text-lg:   1.5625rem;
+  --text-xl:   1.9531rem;
+  --text-2xl:  2.4414rem;
+  --text-3xl:  3.0518rem;
+  --text-display:   clamp(2.75rem, 5vw + 1rem, 5.25rem);
+  --text-display-s: clamp(2rem, 3.5vw + 0.75rem, 3.5rem);
+
+  /* — спейсинг, 4pt — */
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6.5rem;
+
+  /* — движение — */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long:  420ms;
+
+  /* — прочее — */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --z-base: 0;
+  --z-raised: 10;
+  --z-nav: 20;
+  --z-overlay: 30;
+  --z-switcher: 40;
+}

@@ -1,0 +1,184 @@
+<!doctype html>
+<!-- PROTOTYPE · итерация 5: победитель — I «Свиток».
+     Оценка крупно, часы словами, окно шире, возвращения к играм (Atomic Heart ×2), оглавление, лайтбокс.
+     Архив: v1 (A/B/C) · v2 (D/E/F/G) · v3 (D/H/F/I/G/J) · v4 (I/J со свитчером) -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Хроника · прототип 5</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style4.css">
+</head>
+<body id="top" class="v-i">
+
+<header class="site-head">
+  <a class="wordmark" href="index.html">Хроника</a>
+  <span class="mono" id="head-count"></span>
+</header>
+
+<main id="app"></main>
+
+<footer class="site-foot">
+  <p>Игры заканчиваются. Воспоминания — нет.</p>
+  <span class="mono">Прототип · данные и тексты — заглушки · ассеты Steam</span>
+</footer>
+
+<button class="toc-btn" id="toc-btn" aria-haspopup="dialog">☰ оглавление</button>
+
+<dialog class="tocd" id="tocd">
+  <button class="x" id="tocd-x" aria-label="Закрыть">✕</button>
+  <h4>Оглавление</h4>
+  <nav class="tocd__list" id="tocd-list" aria-label="Список игр"></nav>
+</dialog>
+
+<dialog class="lb" id="lb">
+  <button class="x" id="lb-x" aria-label="Закрыть">✕</button>
+  <img id="lb-img" alt="">
+  <p class="mono cap" id="lb-cap"></p>
+</dialog>
+
+<script src="data.js"></script>
+<script>
+const LIST = CHRONICLE5;
+
+const doneRuns = LIST.filter(g => !g.dropped);
+const totalHours = LIST.reduce((s, g) => s + g.hours, 0);
+document.getElementById("head-count").textContent =
+  `${new Set(doneRuns.map(g => g.appid)).size} игр · ${totalHours} ч`;
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+function ruHours(n) {
+  const m10 = n % 10, m100 = n % 100;
+  const w = (m100 >= 11 && m100 <= 14) ? "часов" : m10 === 1 ? "час" : (m10 >= 2 && m10 <= 4) ? "часа" : "часов";
+  return `${n} ${w}`;
+}
+
+const pairIdx = g => g.link
+  ? LIST.findIndex(e => e.appid === g.appid && e.finished === g.link.to)
+  : -1;
+
+function metaLine(g) {
+  let m = g.dropped
+    ? `${ruDate(g.finished)} · ${ruHours(g.hours)} · <span class="drop-tag">дропнул</span>`
+    : `${ruDate(g.finished)} · ${ruHours(g.hours)} в игре`;
+  const pi = pairIdx(g);
+  if (pi !== -1) m += ` · <a class="rev" href="#e${pi}">${g.link.text} ↗</a>`;
+  return m;
+}
+
+const noteHtml = g => (g.note ?? NOTES[g.appid] ?? []).map(p => `<p>${p}</p>`).join("");
+const scoreHtml = g => g.score
+  ? `<span class="score" aria-label="Оценка ${g.score} из 10"><span class="n">${g.score}</span><span class="of">из 10</span></span>`
+  : "";
+const clip = g => g.micro
+  ? `<video class="clip" src="${g.micro}" muted loop playsinline preload="none"
+       poster="${g.shots[4] ?? g.shots[0]}" aria-label="Микротрейлер ${esc(g.name)} — клик ставит на паузу"></video>`
+  : "";
+const shotImg = (g, idx) => `<img class="shot" src="${g.shots[idx]}"
+  alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">`;
+
+const momentsHtml = g => {
+  const ms = g.dropped ? null : MOMENTS[g.appid];
+  if (!ms) return "";
+  return `<div class="moments"><h4 class="moments__title">Моменты</h4>` + ms.map(m => `
+    <figure class="moment">
+      <img class="shot" src="${g.shots[m.shot]}" alt="${esc(m.t)}" loading="lazy" width="1920" height="1080">
+      <figcaption><strong>${m.t}</strong><p>${m.p}</p></figcaption>
+    </figure>`).join("") + `</div>`;
+};
+
+/* — I · Свиток: обои приклеены, панели по центру плывут поверх — */
+let html = `<section class="vi" aria-label="Хроника">`;
+LIST.forEach((g, i) => {
+  const body = g.dropped
+    ? `<div class="glass note is-drop">
+         <span class="mono meta">${metaLine(g)}</span>
+         <h3 class="verdict">${g.verdict}</h3>
+         ${noteHtml(g)}
+       </div>`
+    : `<div class="glass note">
+         ${scoreHtml(g)}
+         <span class="mono meta">${metaLine(g)}</span>
+         <h3 class="verdict">${g.verdict}</h3>
+         ${noteHtml(g)}
+       </div>
+       <div class="glass glass--media">
+         ${clip(g)}
+         <div class="pair">${shotImg(g, 0)}${shotImg(g, 1)}</div>
+       </div>
+       ${momentsHtml(g) ? `<div class="glass">${momentsHtml(g)}</div>` : ""}`;
+  html += `
+  <article class="stage" id="e${i}" data-nav="${i}">
+    <div class="iflow__hero">
+      <img class="bg" src="${g.hero}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+      <img class="logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+    </div>
+    <div class="iflow__body">${body}</div>
+  </article>`;
+});
+document.getElementById("app").innerHTML = html + `</section>`;
+
+/* — оглавление-оверлей — */
+const tocd = document.getElementById("tocd");
+document.getElementById("tocd-list").innerHTML = LIST.map((g, i) => `
+  <a href="#e${i}" data-nav-to="${i}">
+    <img src="${g.poster}" alt="" loading="lazy" width="600" height="900">
+    <span class="nm">${esc(g.name)}</span>
+    <span class="mono">${g.dropped ? '<span class="drop-tag">дроп</span> · ' : ""}${g.finished.slice(0, 4)}</span>
+  </a>`).join("");
+document.getElementById("toc-btn").addEventListener("click", () => tocd.showModal());
+document.getElementById("tocd-x").addEventListener("click", () => tocd.close());
+tocd.addEventListener("click", e => {
+  if (e.target === tocd) { tocd.close(); return; }
+  const a = e.target.closest("a[data-nav-to]");
+  if (!a) return;
+  e.preventDefault();
+  tocd.close();
+  document.getElementById(`e${a.dataset.navTo}`)?.scrollIntoView({ behavior: "smooth" });
+});
+
+/* — видео: play в кадре / pause вне; клик — вручную; reduced-motion — только клик — */
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clips = document.querySelectorAll("video.clip");
+clips.forEach(v => v.addEventListener("click", () => { v.paused ? v.play() : v.pause(); v.dataset.manual = "1"; }));
+if (!reduceMotion) {
+  const vio = new IntersectionObserver(es => es.forEach(e => {
+    const v = e.target;
+    if (v.dataset.manual) return;
+    if (e.isIntersecting) v.play(); else v.pause();
+  }), { threshold: 0.35 });
+  clips.forEach(v => vio.observe(v));
+}
+
+/* — лайтбокс — */
+const lb = document.getElementById("lb");
+const lbImg = document.getElementById("lb-img");
+const lbCap = document.getElementById("lb-cap");
+document.addEventListener("click", e => {
+  const im = e.target.closest("img.shot");
+  if (!im || lb.open) return;
+  lbImg.src = im.src;
+  lbImg.alt = im.alt;
+  lbCap.textContent = im.alt;
+  lb.showModal();
+});
+document.getElementById("lb-x").addEventListener("click", () => lb.close());
+lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
+lb.addEventListener("close", () => { lbImg.src = ""; });
+
+/* — scroll-spy: подсветка оглавления — */
+const spy = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const i = e.target.dataset.nav;
+    document.querySelectorAll("[data-nav-to]").forEach(a =>
+      a.classList.toggle("on", a.dataset.navTo === i));
+  });
+}, { rootMargin: "-35% 0px -55% 0px" });
+document.querySelectorAll("[data-nav]").forEach(el => spy.observe(el));
+</script>
+</body>
+</html>

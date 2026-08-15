@@ -1,0 +1,410 @@
+/* Hallmark · см. стамп в tokens.css · PROTOTYPE — выбросить после решения */
+@import url("tokens.css");
+
+/* ———— база ———— */
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+html, body { overflow-x: clip; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-weight: 350;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, video { max-width: 100%; display: block; }
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+  transition: none;
+}
+
+::selection { background: var(--color-accent); color: var(--color-scrim); }
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--color-neutral);
+}
+
+/* ———— nav (N9, edge-aligned) ———— */
+.site-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-lg) clamp(1rem, 4vw, 4rem) var(--space-md);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-md);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.wordmark:hover { color: var(--color-accent); }
+
+.site-head .mono { white-space: nowrap; }
+
+/* ———— footer (Ft5, statement) ———— */
+.site-foot {
+  padding: var(--space-3xl) clamp(1rem, 4vw, 4rem) var(--space-xl);
+  border-top: 1px solid var(--color-rule);
+  margin-top: var(--space-3xl);
+}
+
+.site-foot p {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-muted);
+  max-width: 28ch;
+  line-height: 1.25;
+}
+
+.site-foot .mono { margin-top: var(--space-md); display: block; }
+
+/* ———— вариант A · «Лента» (Photographic) ———— */
+.feed { display: none; }
+body.v-a .feed { display: block; }
+body.v-a .shelf, body.v-a .reel { display: none; }
+
+.feed__year {
+  font-size: var(--text-display-s);
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: var(--space-2xl) clamp(1rem, 4vw, 4rem) var(--space-lg);
+}
+
+.band {
+  display: block;
+  position: relative;
+  text-decoration: none;
+  aspect-ratio: 96 / 31;            /* пропорция library_hero */
+  min-height: 240px;
+  overflow: clip;
+  margin-bottom: var(--space-xs);
+}
+
+.band__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-strong), var(--color-scrim-0) 55%);
+  transition: opacity var(--dur-short) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .band:hover::after { opacity: 0.55; }
+}
+
+.band:active::after { opacity: 0.75; }
+
+.band__meta {
+  position: absolute;
+  inset-inline: clamp(1rem, 4vw, 4rem);
+  bottom: var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-lg);
+  z-index: var(--z-raised);
+}
+
+.band__logo { max-height: 72px; max-width: min(40vw, 320px); width: auto; object-fit: contain; object-position: left bottom; }
+
+.band__right { text-align: right; flex-shrink: 0; color: var(--color-muted); }
+
+.band__verdict {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  color: var(--color-ink);
+  line-height: 1.2;
+  max-width: 34ch;
+  margin-top: var(--space-xs);
+}
+
+/* ———— вариант B · «Полка» (Catalogue) ———— */
+.shelf { display: none; }
+body.v-b .shelf { display: block; }
+body.v-b .feed, body.v-b .reel { display: none; }
+
+.shelf__intro {
+  padding: var(--space-xl) clamp(1rem, 4vw, 4rem) var(--space-2xl);
+  max-width: 52ch;
+}
+
+.shelf__intro h1 { font-size: var(--text-2xl); margin-bottom: var(--space-sm); }
+.shelf__intro p  { color: var(--color-muted); }
+
+.shelf__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(170px, 42vw), 1fr));
+  gap: var(--space-xl) var(--space-lg);
+  padding-inline: clamp(1rem, 4vw, 4rem);
+}
+
+.spine { text-decoration: none; }
+
+.spine__poster {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .spine:hover .spine__poster { transform: translateY(-4px); }
+}
+
+.spine:active .spine__poster { transform: translateY(-1px); }
+
+.spine__name {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: 1.15;
+  margin-top: var(--space-sm);
+}
+
+.spine .mono { display: block; margin-top: var(--space-2xs); }
+
+/* ———— вариант C · «Кинолента» (Marquee Hero) ———— */
+.reel { display: none; }
+body.v-c .reel { display: block; }
+body.v-c .feed, body.v-c .shelf { display: none; }
+body.v-c { scroll-snap-type: y proximity; }
+body.v-c .site-head { position: absolute; inset-inline: 0; top: 0; z-index: var(--z-nav); }
+body.v-c .site-foot { display: none; }
+
+.frame {
+  position: relative;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  display: grid;
+  align-content: end;
+  overflow: clip;
+}
+
+.frame__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-strong), var(--color-scrim-faint) 60%);
+}
+
+.frame__inner {
+  position: relative;
+  z-index: var(--z-raised);
+  padding: 0 clamp(1rem, 4vw, 4rem) var(--space-2xl);
+  max-width: 68rem;
+}
+
+.frame__logo { max-height: 96px; max-width: min(64vw, 380px); width: auto; object-fit: contain; object-position: left bottom; }
+
+.frame__verdict {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.15;
+  max-width: 24ch;
+  margin-top: var(--space-lg);
+}
+
+.frame__inner .mono { display: block; margin-top: var(--space-md); color: var(--color-muted); }
+
+.frame__more {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+  text-decoration: none;
+  margin-top: var(--space-lg);
+  white-space: nowrap;
+}
+
+.frame__more:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.frame__more:active, .entry-nav a:active { color: var(--color-ink); }
+
+.frame--title { align-content: center; }
+.frame--title .frame__inner h1 { font-size: var(--text-display); font-weight: 600; }
+.frame--title .frame__inner p { color: var(--color-muted); max-width: 44ch; margin-top: var(--space-md); }
+
+/* ———— детальная страница ———— */
+.hero {
+  position: relative;
+  height: 72dvh;
+  min-height: 380px;
+  overflow: clip;
+}
+
+.hero__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 120%;                       /* запас под параллакс-сдвиг */
+  object-fit: cover;
+  will-change: transform;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--color-paper), var(--color-scrim-0) 45%);
+}
+
+.hero__inner {
+  position: absolute;
+  inset-inline: clamp(1rem, 4vw, 4rem);
+  bottom: var(--space-xl);
+  z-index: var(--z-raised);
+}
+
+.hero__logo { max-height: 110px; max-width: min(70vw, 420px); width: auto; object-fit: contain; object-position: left bottom; }
+
+.entry {
+  max-width: 46rem;
+  padding-inline: clamp(1rem, 4vw, 4rem);
+  margin-top: var(--space-xl);
+}
+
+.entry__meta { display: block; margin-bottom: var(--space-lg); }
+
+.entry__verdict {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+  max-width: 26ch;
+  margin-bottom: var(--space-xl);
+}
+
+.entry p { max-width: 65ch; margin-bottom: var(--space-md); color: var(--color-muted); }
+.entry p strong { color: var(--color-ink); font-weight: 600; }
+
+.entry__pending { color: var(--color-neutral); }
+
+.media { margin: var(--space-2xl) 0; }
+
+.media video, .media img { width: 100%; border-radius: var(--radius-md); }
+
+.media figcaption { margin-top: var(--space-xs); }
+
+.media--pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.entry-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-2xl) clamp(1rem, 4vw, 4rem) 0;
+  max-width: 46rem;
+}
+
+.entry-nav a {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  color: var(--color-neutral);
+  white-space: nowrap;
+}
+
+.entry-nav a:hover { color: var(--color-accent); }
+
+/* ———— прототипный свитчер (не часть дизайна) ———— */
+.proto-switch {
+  position: fixed;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-switcher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--proto-bg);
+  border: 1px solid var(--proto-rule);
+  border-radius: 999px;
+  padding: var(--space-xs) var(--space-md);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--proto-ink);
+  backdrop-filter: blur(6px);
+}
+
+.proto-switch button {
+  all: unset;
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  line-height: 1.6;
+}
+
+.proto-switch button:focus-visible { outline: 2px solid var(--proto-focus); border-radius: 4px; }
+
+.proto-switch__label { white-space: nowrap; min-width: 13ch; text-align: center; }
+
+/* ———— мобилка ———— */
+@media (max-width: 40rem) {
+  .band { aspect-ratio: auto; height: 52dvh; }
+  .band__meta { flex-direction: column; align-items: flex-start; gap: var(--space-sm); }
+  .band__right { text-align: left; }
+  .band__logo { max-height: 52px; }
+  .frame__logo { max-height: 64px; }
+  .hero { height: 52dvh; }
+  .hero__logo { max-height: 72px; }
+  .media--pair { grid-template-columns: minmax(0, 1fr); }
+  .site-head { flex-wrap: wrap; }
+}
+
+/* ———— reduced motion ———— */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 150ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+  }
+  html { scroll-behavior: auto; }
+  .hero__img { height: 100%; transform: none !important; }
+}

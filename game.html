@@ -1,0 +1,106 @@
+<!doctype html>
+<!-- PROTOTYPE · детальная страница: game.html?appid=1145360 -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Запись · прототип</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="wordmark" href="index.html">Хроника</a>
+  <span class="mono" id="head-meta"></span>
+</header>
+
+<main id="app"></main>
+
+<footer class="site-foot">
+  <p>Игры заканчиваются. Воспоминания — нет.</p>
+  <span class="mono">Прототип · данные-заглушки · ассеты Steam</span>
+</footer>
+
+<script src="data.js"></script>
+<script>
+/* впечатление написано только для Hades — образец полной записи */
+const ENTRIES = {
+  1145360: `
+  <p><strong>Сначала казалось, что это игра про реакцию.</strong> Комнаты, дротики,
+  щиты, откат. Потом — что про билды: собрал Артемиду с ядом, полетел. И только
+  к тридцатой попытке дошло, что это игра про разговоры между смертями. Погибаешь —
+  и бежишь домой узнать, что скажет Ахилл.</p>
+  <p>Сюжет, рассказанный поражениями, — до сих пор не понимаю, как это работает.
+  Каждый провал двигает историю вперёд, и в какой-то момент проигрывать становится
+  почти не обидно. Почти.</p>
+  <p>Сороковая попытка — та самая. Снег, мать, короткий разговор, ради которого всё
+  и было. Титры я пересматривал два раза.</p>`,
+};
+
+const appid = Number(new URLSearchParams(location.search).get("appid")) || GAMES[0].appid;
+const idx = Math.max(0, GAMES.findIndex(g => g.appid === appid));
+const g = GAMES[idx];
+const prev = GAMES[idx - 1];
+const next = GAMES[idx + 1];
+
+document.title = `${g.name} · Хроника`;
+document.getElementById("head-meta").textContent = `${ruDate(g.finished)} · ${g.hours} ч · ${g.score}/10`;
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const entry = ENTRIES[g.appid]
+  ?? `<p class="entry__pending">Впечатление ещё не записано — пока только вердикт и кадры.</p>`;
+
+document.getElementById("app").innerHTML = `
+  <div class="hero">
+    <img class="hero__img" id="parallax" src="${g.hero}" alt="" fetchpriority="high" width="3840" height="1240">
+    <div class="hero__inner">
+      <img class="hero__logo" src="${g.logo}" alt="${esc(g.name)}">
+    </div>
+  </div>
+
+  <article class="entry">
+    <span class="mono entry__meta">${ruDate(g.finished)} · ${g.hours} часов · оценка ${g.score}/10 · ${g.genres.join(" · ")}</span>
+    <h1 class="entry__verdict">${g.verdict}</h1>
+    ${entry}
+
+    ${g.micro ? `
+    <figure class="media">
+      <video src="${g.micro}" ${matchMedia("(prefers-reduced-motion: reduce)").matches ? "" : "autoplay"}
+        muted loop playsinline controls preload="metadata" poster="${g.shots[4] ?? g.shots[0]}"></video>
+      <figcaption class="mono">микротрейлер</figcaption>
+    </figure>` : ""}
+
+    <figure class="media">
+      <img src="${g.shots[0]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+      <figcaption class="mono">кадр 01</figcaption>
+    </figure>
+
+    <div class="media media--pair">
+      <img src="${g.shots[1]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+      <img src="${g.shots[2]}" alt="Кадр из ${esc(g.name)}" loading="lazy" width="1920" height="1080">
+    </div>
+  </article>
+
+  <nav class="entry-nav" aria-label="Соседние записи">
+    ${prev ? `<a href="game.html?appid=${prev.appid}">← ${esc(prev.name)}</a>` : "<span></span>"}
+    ${next ? `<a href="game.html?appid=${next.appid}">${esc(next.name)} →</a>` : "<span></span>"}
+  </nav>`;
+
+/* параллакс hero — явный запрос; transform-only, rAF, отключается на reduced-motion */
+const img = document.getElementById("parallax");
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  let ticking = false;
+  addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      img.style.transform = `translateY(${Math.min(scrollY, innerHeight) * -0.18}px)`;
+      ticking = false;
+    });
+  }, { passive: true });
+}
+</script>
+</body>
+</html>

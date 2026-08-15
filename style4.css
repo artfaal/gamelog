@@ -1,0 +1,68 @@
+/* Hallmark · итерация 5: победитель I «Свиток» — оценка крупно, часы словами, окно шире, возвращения
+ * тема и токены — tokens.css (стамп там же) · PROTOTYPE — выбросить после решения */
+@import url("style3.css");
+
+/* reset в базе обнулил margin у dialog — вернуть нативное центрирование top-layer */
+dialog { margin: auto; }
+
+:root { --text-prose: 1.125rem; }
+
+/* окно текста шире (+40% от 54rem, но обои по бокам дышат) */
+body.v-i .glass { width: min(100% - 8rem, 76rem); max-width: 76rem; }
+body.v-i .note p { max-width: 75ch; font-size: var(--text-prose); }
+body.v-i .verdict { max-width: 40ch; }
+
+/* оценка — крупно в углу панели */
+.glass.note { position: relative; }
+.glass .meta { padding-inline-end: 5rem; }
+.score {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2xs);
+  line-height: 1;
+}
+.score .n {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  color: var(--color-accent);
+}
+.score .of {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--color-muted);
+}
+
+/* связка заходов одной игры */
+.rev { color: var(--color-accent); text-decoration: none; white-space: nowrap; }
+.rev:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rev:active { color: var(--color-ink); }
+
+@media (max-width: 48rem) {
+  body.v-i .glass { width: 100%; }
+  .score { top: var(--space-md); right: var(--space-md); }
+  .score .n { font-size: var(--text-xl); }
+  .glass .meta { padding-inline-end: 3.5rem; }
+}
+
+/* оглавление: читаемый шрифт, крупнее постеры, воздух */
+.tocd { width: min(94vw, 30rem); }
+.tocd__list img { width: 48px; }
+.tocd__list .nm {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-base);
+  line-height: 1.3;
+  color: var(--color-ink);
+}
+.tocd__list a { gap: var(--space-md); padding: var(--space-xs) var(--space-sm); }
+
+/* счётчик шапки не заезжает под fixed-кнопку оглавления */
+.site-head { padding-inline-end: 12rem; }
+@media (max-width: 48rem) {
+  .site-head { padding-inline-end: clamp(1rem, 4vw, 4rem); } /* кнопка на мобиле внизу */
+}

@@ -1,0 +1,563 @@
+/* Hallmark · итерация 2 (одностраничные варианты D/E/F/G) · тема и токены — tokens.css, стамп там же
+ * macrostructure: D Photographic-развороты · E Index-First split · F Marquee sticky-наплывы · G Long Document поток
+ * PROTOTYPE — выбросить после решения */
+@import url("tokens.css");
+
+/* ———— база (как в итерации 1) ———— */
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+html, body { overflow-x: clip; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-weight: 350;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, video { max-width: 100%; height: auto; display: block; }
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+  transition: none;
+}
+
+::selection { background: var(--color-accent); color: var(--color-scrim); }
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--color-neutral);
+}
+
+.site-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-lg) clamp(1rem, 4vw, 4rem) var(--space-md);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-md);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.wordmark:hover { color: var(--color-accent); }
+.site-head .mono { white-space: nowrap; }
+
+.site-foot {
+  padding: var(--space-3xl) clamp(1rem, 4vw, 4rem) var(--space-xl);
+  border-top: 1px solid var(--color-rule);
+  margin-top: var(--space-3xl);
+}
+.site-foot p {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-muted);
+  max-width: 28ch;
+  line-height: 1.25;
+}
+.site-foot .mono { margin-top: var(--space-md); display: block; }
+
+/* видимость вариантов */
+.vd, .ve, .vf, .vg, .vh, .vi, .vj { display: none; }
+body.v-d .vd { display: block; }
+body.v-e .ve { display: block; }
+body.v-f .vf { display: block; }
+body.v-g .vg { display: block; }
+body.v-h .vh { display: block; }
+body.v-i .vi { display: block; }
+body.v-j .vj { display: block; }
+/* фиксированные навигации держат свою раскладку */
+body.v-d .rail, body.v-h .rail { display: grid; }
+body.v-f .strip, body.v-i .strip { display: flex; }
+
+/* ———— общие куски записей ———— */
+.note p { max-width: 65ch; margin-bottom: var(--space-md); color: var(--color-muted); }
+
+.verdict {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+  max-width: 30ch;
+  margin-bottom: var(--space-md);
+}
+
+.shot { border-radius: var(--radius-sm); width: 100%; }
+
+.clip { border-radius: var(--radius-sm); width: 100%; cursor: pointer; }
+
+/* ———— D · «Развороты» ———— */
+.jour__year {
+  font-family: var(--font-display);
+  font-size: var(--text-display-s);
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: var(--space-2xl) clamp(1rem, 4vw, 4rem) var(--space-lg);
+}
+
+.jour__hero {
+  position: relative;
+  aspect-ratio: 96 / 31;
+  min-height: 220px;
+  overflow: clip;
+}
+.jour__hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.jour__hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-strong), var(--color-scrim-0) 55%);
+}
+.jour__hero .logo {
+  position: absolute;
+  left: clamp(1rem, 4vw, 4rem);
+  bottom: var(--space-lg);
+  max-height: 64px; max-width: min(40vw, 300px);
+  width: auto; object-fit: contain;
+  z-index: var(--z-raised);
+}
+
+.jour__body {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  gap: var(--space-xl);
+  padding: var(--space-xl) clamp(1rem, 4vw, 4rem) var(--space-2xl);
+  max-width: 78rem;
+}
+.jour__body .meta { display: block; margin-bottom: var(--space-md); }
+.jour__media { display: grid; gap: var(--space-md); align-content: start; }
+.jour__media .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+
+/* рейка-точки справа */
+.rail {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: var(--z-nav);
+  gap: var(--space-sm);
+  justify-items: center;
+}
+.rail a {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-rule);
+  display: block;
+}
+.rail a:hover { background: var(--color-muted); }
+.rail a.on { background: var(--color-accent); }
+.rail .yr {
+  writing-mode: vertical-rl;
+  margin: var(--space-2xs) 0;
+}
+
+/* ———— E · «Оглавление» ———— */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+  gap: var(--space-2xl);
+  padding-inline: clamp(1rem, 4vw, 4rem);
+}
+
+.toc {
+  position: sticky;
+  top: var(--space-lg);
+  align-self: start;
+  display: grid;
+  gap: var(--space-2xs);
+  max-height: calc(100dvh - var(--space-2xl));
+  overflow-y: auto;
+}
+.toc a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-sm);
+  align-items: center;
+  text-decoration: none;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  border-inline-start: 2px solid transparent;
+}
+.toc a:hover { background: var(--color-paper-2); }
+.toc a.on { border-inline-start-color: var(--color-accent); background: var(--color-paper-2); }
+.toc img { width: 34px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 2px; }
+.toc .nm {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  line-height: 1.15;
+  display: block;
+}
+.toc .mono { display: block; margin-top: 2px; }
+
+.split__feed { display: grid; gap: var(--space-3xl); padding-block: var(--space-lg) var(--space-2xl); max-width: 52rem; }
+
+.card__hero { position: relative; aspect-ratio: 21 / 9; overflow: clip; border-radius: var(--radius-md); }
+.card__hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.card__hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 50%);
+}
+.card__hero .logo {
+  position: absolute; left: var(--space-lg); bottom: var(--space-md);
+  max-height: 52px; max-width: min(40vw, 260px); width: auto; object-fit: contain;
+  z-index: var(--z-raised);
+}
+.card .meta { display: block; margin: var(--space-md) 0; }
+.card .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); margin-top: var(--space-md); }
+
+/* ———— F · «Наплывы» ———— */
+.cine .stage { position: relative; }
+.cine__hero {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: clip;
+}
+.cine__hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cine__hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-strong), var(--color-scrim-faint) 60%);
+}
+.cine__hero .logo {
+  position: absolute;
+  left: clamp(1rem, 4vw, 4rem);
+  bottom: clamp(4rem, 14dvh, 8rem);
+  max-height: 88px; max-width: min(60vw, 360px);
+  width: auto; object-fit: contain;
+  z-index: var(--z-raised);
+}
+
+.cine__body {
+  position: relative;
+  z-index: var(--z-raised);
+  background: var(--color-paper);
+  padding: var(--space-2xl) clamp(1rem, 4vw, 4rem) var(--space-3xl);
+}
+.cine__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  gap: var(--space-xl);
+  max-width: 78rem;
+}
+.cine__cols .meta { display: block; margin-bottom: var(--space-md); }
+.cine__media { display: grid; gap: var(--space-md); align-content: start; }
+
+/* кинолента-навигация снизу */
+.strip {
+  position: fixed;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-nav);
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--color-scrim-strong);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(6px);
+  max-width: min(92vw, 34rem);
+  overflow-x: auto;
+}
+.strip a { flex: 0 0 auto; opacity: 0.55; border-radius: 2px; }
+.strip a:hover { opacity: 0.85; }
+.strip a.on { opacity: 1; outline: 1px solid var(--color-accent); outline-offset: 1px; }
+.strip img { height: 44px; width: auto; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 2px; }
+
+/* в F/I пилюля-свитчер уезжает выше киноленты */
+body.v-f .proto-switch, body.v-i .proto-switch { bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.5rem); }
+
+/* ———— G · «Поток» ———— */
+.mag { max-width: 72rem; margin-inline: auto; padding-inline: clamp(1rem, 4vw, 4rem); }
+
+.yearbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(6px);
+  padding: var(--space-sm) clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--color-rule);
+}
+.yearbar a {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--color-neutral);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.yearbar a:hover { color: var(--color-muted); }
+.yearbar a.on { color: var(--color-accent); }
+.yearbar a:last-child { margin-inline-start: auto; }
+
+.mag__entry {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--space-2xl);
+  padding-block: var(--space-2xl);
+  border-bottom: 1px solid var(--color-rule);
+}
+.mag__entry:nth-child(even of .mag__entry) .mag__media { order: -1; }
+
+.mag__text .logo { max-height: 56px; max-width: min(60vw, 260px); width: auto; object-fit: contain; margin-bottom: var(--space-md); }
+.mag__text .meta { display: block; margin-bottom: var(--space-md); }
+
+.mag__media { display: grid; gap: var(--space-md); align-content: start; }
+.mag__media .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+
+/* ———— прототипный свитчер (вне дизайна) ———— */
+.proto-switch {
+  position: fixed;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-switcher);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--proto-bg);
+  border: 1px solid var(--proto-rule);
+  border-radius: 999px;
+  padding: var(--space-xs) var(--space-md);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--proto-ink);
+  backdrop-filter: blur(6px);
+}
+.proto-switch button { all: unset; cursor: pointer; padding: 0 var(--space-xs); line-height: 1.6; }
+.proto-switch button:focus-visible { outline: 2px solid var(--proto-focus); border-radius: 4px; }
+.proto-switch__label { white-space: nowrap; min-width: 15ch; text-align: center; }
+
+/* ———— мобилка ———— */
+@media (max-width: 48rem) {
+  .jour__body, .cine__cols, .mag__entry { grid-template-columns: minmax(0, 1fr); }
+  .mag__entry:nth-child(even of .mag__entry) .mag__media { order: 0; }
+  body.v-d .rail, body.v-h .rail { display: none; }
+  .split { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .toc {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-nav);
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    overflow-y: clip;
+    max-height: none;
+    background: var(--color-scrim-strong);
+    backdrop-filter: blur(6px);
+    padding: var(--space-xs);
+    margin-inline: calc(-1 * clamp(1rem, 4vw, 4rem));
+    padding-inline: clamp(1rem, 4vw, 4rem);
+  }
+  .toc a { border-inline-start: none; border-block-end: 2px solid transparent; }
+  .toc a.on { border-block-end-color: var(--color-accent); }
+  .toc img { width: 26px; }
+  .toc .nm { font-size: var(--text-sm); white-space: nowrap; }
+  .toc .mono { display: none; }
+  .jour__hero { aspect-ratio: auto; height: 44dvh; }
+  .jour__hero .logo { max-height: 48px; }
+  .cine__hero .logo { max-height: 60px; }
+  .yearbar { padding-inline: var(--space-md); }
+  .strip img { height: 36px; }
+}
+
+/* ———— reduced motion ———— */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 150ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+/* ———— итерация 3 ———— */
+
+/* скрины кликабельны */
+img.shot { cursor: zoom-in; }
+
+/* ———— H · «Окна» — текст плашками на обоине, игра = экран ———— */
+.pane {
+  position: relative;
+  min-height: 100dvh;
+  overflow: clip;
+  display: grid;
+  align-content: end;
+}
+.pane img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pane__grid {
+  position: relative;
+  z-index: var(--z-raised);
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-lg);
+  align-items: end;
+  padding: var(--space-2xl) clamp(1rem, 4vw, 4rem);
+  max-width: 90rem;
+}
+.win {
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+.win .logo { max-height: 52px; max-width: min(50vw, 260px); width: auto; object-fit: contain; margin-bottom: var(--space-md); }
+.win .meta { display: block; margin-bottom: var(--space-sm); }
+.win--media { display: grid; gap: var(--space-md); align-content: start; }
+.win--media .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+.win--moments { grid-column: 1 / -1; }
+
+/* ———— I · «Свиток» — панели плывут поверх приклеенных обоев ———— */
+.iflow__hero { position: sticky; top: 0; height: 100dvh; overflow: clip; }
+.iflow__hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.iflow__hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
+}
+.iflow__hero .logo {
+  position: absolute;
+  left: clamp(1rem, 4vw, 4rem);
+  bottom: clamp(4rem, 16dvh, 9rem);
+  max-height: 88px; max-width: min(60vw, 360px);
+  width: auto; object-fit: contain;
+  z-index: var(--z-raised);
+}
+.iflow__body {
+  position: relative;
+  z-index: var(--z-raised);
+  padding: 0 clamp(1rem, 4vw, 4rem) var(--space-3xl);
+  margin-top: -14dvh;
+  display: grid;
+  gap: var(--space-lg);
+  justify-items: start;
+}
+.glass {
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  max-width: 46rem;
+}
+.glass .meta { display: block; margin-bottom: var(--space-sm); }
+.glass--media { display: grid; gap: var(--space-md); width: min(100%, 46rem); }
+.glass--media .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); }
+
+/* ———— J · «Поток II» — wallpaper активной игры за контентом ———— */
+.jbg { position: fixed; inset: 0; }
+.jbg img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--dur-long) var(--ease-in-out);
+}
+.jbg img.on { opacity: 1; }
+.jbg::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--color-scrim-strong), var(--color-scrim-mid));
+}
+.vj .jwrap { position: relative; }
+body.v-j .site-head, body.v-j .site-foot { position: relative; z-index: var(--z-raised); }
+body.v-j .site-foot { border-top-color: transparent; }
+.vj .mag__entry {
+  border-bottom: none;
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  margin-block: var(--space-2xl);
+}
+.vj .yearbar { border-bottom: none; background: var(--color-scrim-mid); }
+
+/* ———— моменты (текст к конкретному скрину) ———— */
+.moments { display: grid; gap: var(--space-lg); margin-top: var(--space-xl); }
+.moments__title {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.moment {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+.moment figcaption strong {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  display: block;
+  margin-bottom: var(--space-xs);
+}
+.moment figcaption p { color: var(--color-muted); max-width: 65ch; }
+.jour__extra { padding: 0 clamp(1rem, 4vw, 4rem) var(--space-2xl); max-width: 78rem; }
+.cine__body .moments { max-width: 78rem; }
+.mag__entry .moments { grid-column: 1 / -1; }
+
+/* ———— лайтбокс ———— */
+.lb {
+  border: none;
+  background: var(--color-paper-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  max-width: min(96vw, 120rem);
+}
+.lb::backdrop { background: var(--color-scrim-strong); }
+.lb img { max-width: 100%; max-height: 84dvh; width: auto; height: auto; }
+.lb .cap { margin-top: var(--space-sm); }
+.lb .x {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-muted);
+  padding: var(--space-2xs) var(--space-xs);
+  line-height: 1;
+}
+.lb .x:hover { color: var(--color-ink); }
+.lb .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: var(--radius-sm); }
+
+/* ———— мобилка для итерации 3 ———— */
+@media (max-width: 48rem) {
+  .pane__grid, .moment { grid-template-columns: minmax(0, 1fr); }
+  .pane__grid { align-items: stretch; padding: var(--space-xl) var(--space-md); }
+  .win, .glass { padding: var(--space-md); }
+  .iflow__body { margin-top: -10dvh; }
+  .iflow__hero .logo { max-height: 60px; }
+  .vj .mag__entry { padding: var(--space-md); margin-block: var(--space-xl); }
+}

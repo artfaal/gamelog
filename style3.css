@@ -1,0 +1,94 @@
+/* Hallmark · итерация 4: финалисты I «Свиток» (панели по центру) и J «Поток II» + оглавление-оверлей + дроп-записи
+ * тема и токены — tokens.css (стамп там же) · PROTOTYPE — выбросить после решения */
+@import url("style2.css");
+
+/* ———— I: панели по центру экрана ———— */
+body.v-i .iflow__body { justify-items: center; }
+body.v-i .iflow__hero .logo {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: clamp(5rem, 20dvh, 12rem);
+}
+body.v-i .glass { width: min(100%, 46rem); }
+/* киноленты в I больше нет — пилюля возвращается вниз */
+body.v-i .proto-switch { bottom: max(1rem, env(safe-area-inset-bottom)); }
+
+/* ———— кнопка и оверлей оглавления ———— */
+.toc-btn {
+  position: fixed;
+  top: var(--space-sm);
+  right: max(var(--space-md), env(safe-area-inset-right));
+  z-index: var(--z-overlay);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  color: var(--color-muted);
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toc-btn:hover { color: var(--color-ink); }
+.toc-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+.vj .yearbar { padding-inline-end: 8rem; }
+
+.tocd {
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  width: min(94vw, 34rem);
+  max-height: 86dvh;
+}
+.tocd::backdrop { background: var(--color-scrim-strong); }
+.tocd h4 {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-bottom: var(--space-md);
+}
+.tocd__list { display: grid; gap: var(--space-2xs); }
+.tocd__list a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  align-items: center;
+  text-decoration: none;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  border-inline-start: 2px solid transparent;
+}
+.tocd__list a:hover { background: var(--color-paper-3); }
+.tocd__list a.on { border-inline-start-color: var(--color-accent); background: var(--color-paper-3); }
+.tocd__list img { width: 32px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 2px; }
+.tocd__list .nm { font-family: var(--font-display); font-size: var(--text-base); line-height: 1.15; }
+.tocd__list .mono { white-space: nowrap; }
+.tocd .x {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+  padding: var(--space-2xs) var(--space-xs);
+  line-height: 1;
+}
+.tocd .x:hover { color: var(--color-ink); }
+.tocd .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: var(--radius-sm); }
+
+/* ———— дроп-записи: только текст, компактно ———— */
+.vj .mag__entry.is-drop { grid-template-columns: minmax(0, 1fr); }
+.is-drop .drop-tag { color: var(--color-accent); }
+
+/* ———— мобилка ———— */
+@media (max-width: 48rem) {
+  .toc-btn { top: auto; bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.4rem); }
+  .vj .yearbar { padding-inline-end: var(--space-md); }
+  body.v-i .iflow__hero .logo { bottom: clamp(4rem, 16dvh, 8rem); }
+}

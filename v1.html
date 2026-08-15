@@ -1,0 +1,146 @@
+<!doctype html>
+<!-- PROTOTYPE · три варианта полки, переключение ?variant=A|B|C и стрелками ← → -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Хроника · прототип</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Sans:wght@350;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-head">
+  <a class="wordmark" href="index.html">Хроника</a>
+  <span class="mono" id="head-count"></span>
+</header>
+
+<main id="app"></main>
+
+<footer class="site-foot">
+  <p>Игры заканчиваются. Воспоминания — нет.</p>
+  <span class="mono">Прототип · данные-заглушки · ассеты Steam</span>
+</footer>
+
+<div class="proto-switch" role="group" aria-label="Переключатель вариантов прототипа">
+  <button type="button" id="sw-prev" aria-label="Предыдущий вариант">←</button>
+  <span class="proto-switch__label" id="sw-label"></span>
+  <button type="button" id="sw-next" aria-label="Следующий вариант">→</button>
+</div>
+
+<script src="data.js"></script>
+<script>
+const VARIANTS = [
+  { key: "A", name: "Лента" },
+  { key: "B", name: "Полка" },
+  { key: "C", name: "Кинолента" },
+];
+
+const totalHours = GAMES.reduce((s, g) => s + g.hours, 0);
+document.getElementById("head-count").textContent =
+  `${GAMES.length} игр · ${totalHours} ч`;
+
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const metaLine = g => `${ruDate(g.finished)} · ${g.hours} ч · ${g.score}/10`;
+
+function renderFeed() {
+  let html = `<section class="feed" aria-label="Лента по годам">`;
+  let year = null;
+  GAMES.forEach((g, i) => {
+    const y = g.finished.slice(0, 4);
+    if (y !== year) { year = y; html += `<h2 class="feed__year">${y}</h2>`; }
+    html += `
+    <a class="band" href="game.html?appid=${g.appid}">
+      <img class="band__img" src="${g.hero}" alt="${esc(g.name)}"
+        ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+      <div class="band__meta">
+        <div>
+          <img class="band__logo" src="${g.logo}" alt="" loading="lazy">
+          <p class="band__verdict">${g.verdict}</p>
+        </div>
+        <div class="band__right mono">${metaLine(g)}</div>
+      </div>
+    </a>`;
+  });
+  return html + `</section>`;
+}
+
+function renderShelf() {
+  let html = `
+  <section class="shelf" aria-label="Полка">
+    <div class="shelf__intro">
+      <h1>Полка</h1>
+      <p>Всё, что пройдено до конца. Корешок — на полку, впечатление — в запись.</p>
+    </div>
+    <div class="shelf__grid">`;
+  GAMES.forEach(g => {
+    html += `
+      <a class="spine" href="game.html?appid=${g.appid}">
+        <img class="spine__poster" src="${g.poster}" alt="${esc(g.name)}" loading="lazy" width="600" height="900">
+        <span class="spine__name">${esc(g.name)}</span>
+        <span class="mono">${metaLine(g)}</span>
+      </a>`;
+  });
+  return html + `</div></section>`;
+}
+
+function renderReel() {
+  let html = `
+  <section class="reel" aria-label="Кинолента">
+    <div class="frame frame--title">
+      <div class="frame__inner">
+        <h1>Хроника</h1>
+        <p>${GAMES.length} пройденных игр, ${totalHours} часов. Листай вниз — от свежего к давнему.</p>
+      </div>
+    </div>`;
+  GAMES.forEach(g => {
+    html += `
+    <article class="frame">
+      <img class="frame__img" src="${g.hero}" alt="" loading="lazy" width="3840" height="1240">
+      <div class="frame__inner">
+        <img class="frame__logo" src="${g.logo}" alt="${esc(g.name)}" loading="lazy">
+        <p class="frame__verdict">${g.verdict}</p>
+        <span class="mono">${metaLine(g)}</span><br>
+        <a class="frame__more" href="game.html?appid=${g.appid}">читать впечатление →</a>
+      </div>
+    </article>`;
+  });
+  return html + `</section>`;
+}
+
+document.getElementById("app").innerHTML = renderFeed() + renderShelf() + renderReel();
+
+/* — переключатель вариантов — */
+function currentIdx() {
+  const key = new URLSearchParams(location.search).get("variant") ?? "A";
+  const i = VARIANTS.findIndex(v => v.key === key.toUpperCase());
+  return i === -1 ? 0 : i;
+}
+
+function applyVariant(i) {
+  const v = VARIANTS[i];
+  document.body.className = "v-" + v.key.toLowerCase();
+  document.getElementById("sw-label").textContent = `${v.key} — ${v.name}`;
+  const url = new URL(location);
+  url.searchParams.set("variant", v.key);
+  history.replaceState(null, "", url);
+}
+
+function cycle(delta) {
+  applyVariant((currentIdx() + delta + VARIANTS.length) % VARIANTS.length);
+  scrollTo({ top: 0, behavior: "instant" });
+}
+
+document.getElementById("sw-prev").addEventListener("click", () => cycle(-1));
+document.getElementById("sw-next").addEventListener("click", () => cycle(1));
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") cycle(-1);
+  if (e.key === "ArrowRight") cycle(1);
+});
+
+applyVariant(currentIdx());
+</script>
+</body>
+</html>
