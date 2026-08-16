@@ -107,7 +107,6 @@ h2, h3, h4 {
   font-size: var(--text-md);
   white-space: nowrap;
 }
-.site-head .mono { white-space: nowrap; }
 .site-foot {
   padding: var(--space-2xl) var(--pad-x);
   border-top: 1px solid var(--color-rule);

@@ -25,7 +25,6 @@ const ruHours = n => plural(n, "час", "часа", "часов");
 // поэтому запятая отдельным span'ом, её сажает на место .score .sep
 const ruScore = n => String(n).replace(".", '<span class="sep">,</span>');
 const ruScoreLabel = n => String(n).replace(".", ",");
-const ruGames = n => plural(n, "игра", "игры", "игр");
 // tbd — «пока неизвестно»: годится для finished, hours и score
 const TBD = "tbd";
 const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
@@ -310,18 +309,13 @@ const tocHtml = [...byYear].map(([y, items]) => `
       </a>`).join("")}</div>
   </section>`).join("");
 
-// счётчик игр — только пройденные: дроп и «сейчас играю» в него не идут
-const games = new Set(entries.filter(e => !e.dropped && !e.playing).map(gameKey)).size;
-// ponytail: часы суммируются по всем заходам, включая дропы — это «наиграно всего»
-const hours = entries.reduce((s, e) => s + (typeof e.fm.hours === "number" ? e.fm.hours : 0), 0);
-
 const page = `<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Хроника</title>
-<meta name="description" content="Игровой дневник: ${ruGames(games)}, ${ruHours(hours)}.">
+<meta name="description" content="Игровой дневник: впечатления, кадры, воспоминания.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Хроника">
 <meta property="og:description" content="Игровой дневник: впечатления, кадры, воспоминания.">
@@ -335,7 +329,6 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 <body id="top">
 <header class="site-head">
   <h1 class="wordmark">Хроника</h1>
-  <span class="mono">${ruGames(games)} · ${hours} ч</span>
 </header>
 <button class="toc-btn" id="toc-btn" aria-haspopup="dialog" aria-label="Оглавление">☰<span class="toc-btn__label"> оглавление</span></button>
 <button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="toc-btn__label"> наверх</span></button>
@@ -409,4 +402,4 @@ for (const [rel, file] of toCopy) {
   mkdirSync(`dist/${rel.slice(0, rel.lastIndexOf("/"))}`, { recursive: true });
   cpSync(file, `dist/${rel}`);
 }
-console.log(`dist: ${entries.length} записей (${ruGames(games)}, ${hours} ч)${DRAFTS ? " + драфты" : ""}`);
+console.log(`dist: ${entries.length} записей${DRAFTS ? " + драфты" : ""}`);
