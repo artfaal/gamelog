@@ -324,11 +324,6 @@ h2, h3, h4 {
   gap: var(--space-lg);
   align-items: center;
 }
-.moment__media { display: grid; gap: var(--space-md); min-width: 0; }
-/* несколько медиа в моменте: текст встаёт сверху, кадры — сеткой во всю ширину */
-.moment--multi { grid-template-columns: minmax(0, 1fr); }
-.moment--multi figcaption { order: -1; }
-.moment--multi .moment__media { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .moment figcaption strong {
   font-family: var(--font-display);
   font-size: var(--text-md);
@@ -356,12 +351,9 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .moment.is-spoiler:not(.open) video,
 .moment.is-spoiler:not(.open) figcaption { filter: blur(14px); pointer-events: none; }
 /* плашка лежит в ячейке кадра — по центру заблюренного изображения */
-.moment.is-spoiler .moment__media { grid-area: 1 / 1; }
+.moment.is-spoiler .shotbtn,
+.moment.is-spoiler .clip { grid-area: 1 / 1; }
 .moment.is-spoiler figcaption { grid-area: 1 / 2; }
-/* у момента с сеткой кадров колонка одна — плашка накрывает его целиком */
-.moment--multi.is-spoiler .moment__media { grid-area: auto; }
-.moment--multi.is-spoiler figcaption { grid-area: auto; }
-.moment--multi.is-spoiler .reveal { grid-area: 1 / 1 / -1 / -1; }
 .reveal {
   all: unset;
   grid-area: 1 / 1;

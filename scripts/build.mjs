@@ -95,7 +95,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     return ref;
   };
 
-  // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref)… / текст)
+  // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref) / текст)
   const parts = body.split(/^## Моменты\s*$/m);
   if (parts.length > 2) fail("секция «## Моменты» должна быть одна");
   const [main, momentsRaw] = parts;
@@ -108,15 +108,14 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       const [head, ...lines] = chunk.split("\n");
       const spoiler = /\{spoiler\}/.test(head);
       const title = head.replace(/\{spoiler\}/, "").trim();
-      // медиа момента: сколько картинок и роликов написано, столько и покажем —
-      // одно идёт рядом с текстом, несколько уходят сеткой под него
-      const shots = [];
-      const text = lines.join("\n").replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, a, ref) => {
-        const src = media(/^\d+$/.test(ref) ? Number(ref) : ref);
-        if (src) shots.push({ src, alt: a || title });
+      let shot = null, alt = title;
+      const text = lines.join("\n").replace(/!\[([^\]]*)\]\(([^)]+)\)/, (_, a, ref) => {
+        shot = media(/^\d+$/.test(ref) ? Number(ref) : ref);
+        if (a) alt = a;
         return "";
       });
-      moments.push({ title, spoiler, shots, html: mdToHtml(text.trim()) });
+      if (/!\[[^\]]*\]\(/.test(text)) fail(`в моменте «${title}» больше одной картинки — оставь одну`);
+      moments.push({ title, spoiler, shot, alt, html: mdToHtml(text.trim()) });
     }
   }
 
@@ -189,7 +188,7 @@ for (const e of entries) {
   if (e.poster) e.poster = await localize(e.poster, id);
   e.shots = await Promise.all(e.shots.map(u => localize(u, id)));
   if (e.clip) e.clip = await localize(e.clip, id);
-  for (const m of e.moments) for (const s of m.shots) s.src = await localize(s.src, id);
+  for (const m of e.moments) if (m.shot) m.shot = await localize(m.shot, id);
 }
 
 // связки заходов одной игры: общий ключ = steam appid | fm.game | slug
@@ -252,14 +251,14 @@ const shotHtml = (src, alt, hidden = false) =>
   `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="1920" height="1080"></button>`;
 
 const momentMedia = m =>
-  !m.shots.length ? ""
-  : `<div class="moment__media">${m.shots.map(s => isVideo(s.src)
-      ? videoHtml(s.src, s.alt, { preload: "metadata", hidden: m.spoiler })
-      : shotHtml(s.src, s.alt, m.spoiler)).join("")}</div>`;
+  !m.shot ? ""
+  : isVideo(m.shot)
+  ? videoHtml(m.shot, m.alt, { preload: "metadata", hidden: m.spoiler })
+  : shotHtml(m.shot, m.alt, m.spoiler);
 
 const momentsHtml = e => e.moments.length
   ? `<div class="glass"><div class="moments"><h4 class="moments__title">Моменты</h4>${e.moments.map(m => `
-      <figure class="moment${m.shots.length > 1 ? " moment--multi" : ""}${m.spoiler ? " is-spoiler" : ""}">
+      <figure class="moment${m.spoiler ? " is-spoiler" : ""}">
         ${m.spoiler ? '<button type="button" class="reveal" aria-label="Спойлер — показать"></button>' : ""}
         ${momentMedia(m)}
         <figcaption${m.spoiler ? " inert" : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
