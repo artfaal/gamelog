@@ -1,0 +1,18 @@
+{
+  "appid": 1371980,
+  "name": "No Rest for the Wicked",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1371980/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1371980/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1371980/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/079327abaf4866604f9f77200ded37da18d7089e/ss_079327abaf4866604f9f77200ded37da18d7089e.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/56066f44f29e8b042c482e0b0680bc101bf1ecd5/ss_56066f44f29e8b042c482e0b0680bc101bf1ecd5.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/1163c9191d2261d845aa96cbc011ed6490182ae8/ss_1163c9191d2261d845aa96cbc011ed6490182ae8.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/ss_01a87d9ec6cef10244eb5dd8d3f55047060da954.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/5b7da66aa69e175a215b52a4461c1d3748ec571e/ss_5b7da66aa69e175a215b52a4461c1d3748ec571e.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/5ced8490a4743651afb3fe68e480ab5422e56e74/ss_5ced8490a4743651afb3fe68e480ab5422e56e74.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/2b72a451d97d92ad5db27bcffae8b9ab99653099/ss_2b72a451d97d92ad5db27bcffae8b9ab99653099.1920x1080.jpg?t=1784886886",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1371980/ss_bfeabbf586f43725d270b0fec654864576726edf.1920x1080.jpg?t=1784886886"
+  ],
+  "micro": null
+}
