@@ -206,16 +206,21 @@ const I_PREV = icon('<polyline points="15 18 9 12 15 6"/>');
 const I_NEXT = icon('<polyline points="9 18 15 12 9 6"/>');
 const I_SHARE = icon('<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>', "i-share");
 const I_CHECK = icon('<polyline points="20 6 9 17 4 12"/>', "i-check");
+const I_CAL = icon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>');
+const I_CLOCK = icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
+const I_PLAY = icon('<polygon points="6 4 20 12 6 20 6 4"/>');
 // логотип Steam — simple-icons (CC0)
 const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>`;
 
+// мета — лента чипов: каждый кусок самодостаточен, разделители не нужны.
+// О дропе говорит медаль оценки, поэтому в ленте его нет — иначе дубль.
 const metaLine = e => {
-  const parts = [e.playing ? '<span class="now-tag">сейчас играю</span>' : ruDate(e.fm.finished)];
+  const parts = [e.playing
+    ? `<span class="chip chip--flag">${I_PLAY}сейчас играю</span>`
+    : `<span class="chip">${I_CAL}${ruDate(e.fm.finished)}</span>`];
   // hours: tbd — часов просто нет в строке, выдумывать нечего
-  const hrs = e.fm.hours === TBD ? null : ruHours(e.fm.hours);
-  if (hrs) parts.push(e.dropped ? hrs : `${hrs} в игре`);
-  if (e.dropped) parts.push('<span class="drop-tag">дропнул</span>');
-  if (e.fm.platform) parts.push(`<span class="platform">${esc(e.fm.platform)}</span>`);
+  if (e.fm.hours !== TBD) parts.push(`<span class="chip">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
+  if (e.fm.platform) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
     const year = String(s.fm.finished).slice(0, 4);
     let label;
@@ -223,18 +228,17 @@ const metaLine = e => {
     else if (s.dropped) label = `первый заход — дроп в ${year}`;
     else if (s.fm.finished > e.fm.finished) label = `вернулся и прошёл в ${year}`;
     else label = `прошёл в ${year}`;
-    parts.push(`<a class="rev" href="#${s.slug}">${label} ↗</a>`);
+    parts.push(`<a class="chip chip--link" href="#${s.slug}">${label} ↗</a>`);
   }
-  const share = `<button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой на запись" title="Поделиться">
-    ${I_SHARE}${I_CHECK}
-  </button>`;
   // есть appid — даём читателю прямой путь на страницу игры в магазине
-  const store = e.fm.steam
-    ? `<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
-        aria-label="Открыть ${esc(e.name)} в Steam" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`
-    : "";
-  // каждый кусок меты — свой элемент строки: разделители не липнут к соседям при переносе
-  return parts.join('<span class="meta__sep" aria-hidden="true">·</span>') + store + share;
+  if (e.fm.steam) parts.push(`<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
+        aria-label="Открыть ${esc(e.name)} в Steam" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`);
+  parts.push(`<span class="chip chip--btn"><button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой на запись" title="Поделиться">
+    ${I_SHARE}${I_CHECK}
+  </button></span>`);
+  // пробел между чипами — не для вида (зазор даёт margin), а чтобы копирование
+  // строки мышью не склеивало значения: «1 июня 202647 часов»
+  return parts.join(" ");
 };
 
 // закрытый спойлер прячется одним inert: он же убирает содержимое из чтения скринридером
@@ -265,10 +269,16 @@ const entryHtml = (e, i) => {
   const logo = e.logo
     ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo" src="${esc(e.logo)}" alt="" loading="lazy">`
     : `<h2 class="logo-text">${esc(e.name)}</h2>`;
-  const score = e.dropped ? ""
+  // оценка — медаль на верхней кромке панели; дуга кольца = сама оценка (--v: 0…10).
+  // подпись для скринридера — отдельным sr-only: aria-label на голом span не работает
+  const medal = (cls, label, inner, style = "") =>
+    `<span class="score${cls}"${style}><span class="sr-only">${label}</span><span class="n" aria-hidden="true">${inner}</span></span>`;
+  const score = e.dropped
+    ? medal(" score--drop", "Дроп — оценки нет", "дроп")
     : e.fm.score === TBD
-    ? `<span class="score score--tbd" aria-label="Оценки пока нет"><span class="n">—</span><span class="of">из 10</span></span>`
-    : `<span class="score" aria-label="Оценка ${ruScoreLabel(e.fm.score)} из 10"><span class="n">${ruScore(e.fm.score)}</span><span class="of">из 10</span></span>`;
+    ? medal(" score--tbd", "Оценки пока нет", `—<span class="of">из 10</span>`)
+    : medal("", `Оценка ${ruScoreLabel(e.fm.score)} из 10`,
+        `${ruScore(e.fm.score)}<span class="of">из 10</span>`, ` style="--v:${e.fm.score}"`);
   const mediaPanel = !e.clip && !e.shots.length ? "" : `
     <div class="glass glass--media">
       ${e.clip ? videoHtml(e.clip, e.name, { poster: e.shots[0] ?? e.hero }) : ""}

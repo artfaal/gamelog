@@ -164,18 +164,39 @@ h2, h3, h4 {
   padding: var(--space-lg);
   width: min(100% - 8rem, 76rem);
 }
-/* мета — строка-флекс: дата, теги, плашки и кнопки стоят на одной линии и переносятся целиком */
+/* мета — лента чипов: каждый кусок самодостаточен, разделители не нужны.
+   Блок с float-заглушкой, а не flex: место под медаль нужно только первой строке,
+   на flex-контейнере паддинг держал бы и все перенесённые строки тоже. */
 .glass .meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2xs) var(--space-xs);
-  margin-bottom: var(--space-sm);
-  padding-inline-end: 5rem;
+  display: block;
+  line-height: 1;
+  margin-bottom: var(--space-xs);   /* нижний отступ добирают сами чипы */
   color: var(--color-muted);
 }
-.meta__sep { color: var(--color-rule); }
-.glass.note { position: relative; }
+.glass .meta::before { content: ""; float: inline-end; width: 13rem; height: 2rem; }
+.chip, .storelink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 1.8rem;
+  margin: 0 var(--space-xs) var(--space-xs) 0;
+  padding: 3px var(--space-xs);
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  background: var(--color-paper-2);
+  color: var(--color-muted);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.chip svg, .chip .share svg { width: 13px; height: 13px; opacity: 0.75; }
+.chip--flag { color: var(--color-accent); border-color: oklch(78% 0.14 75 / 0.4); }
+.chip--platform { text-transform: uppercase; }
+.chip--link { color: var(--color-accent); text-decoration: none; }
+.chip--link:hover { border-color: oklch(78% 0.14 75 / 0.5); }
+.chip--link:active { color: var(--color-ink); }
+.chip--btn { padding-inline: var(--space-xs); }
+.chip--btn:hover { border-color: var(--color-neutral); }
+.glass.note { position: relative; padding-top: var(--space-xl); }
 .note p { max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
 .verdict {
@@ -186,31 +207,58 @@ h2, h3, h4 {
   margin-bottom: var(--space-md);
 }
 
+/* оценка — медаль на верхней кромке панели: кольцо заполнено на --v из 10 */
 .score {
+  --v: 0;
   position: absolute;
-  top: var(--space-lg);
-  right: var(--space-lg);
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2xs);
-  line-height: 1;
+  top: -2.4rem;
+  /* не в самом углу: в правом верхнем углу экрана висит кнопка оглавления,
+     и медаль проезжала бы под ней при прокрутке */
+  right: 7rem;
+  z-index: var(--z-raised);
+  width: 6.5rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  /* незаполненный сегмент — почти чёрный, иначе на светлом арте кольцо читается полумесяцем;
+     плотный ободок скрима отделяет медаль от обоев */
+  background: conic-gradient(var(--color-accent) calc(var(--v) * 36deg), var(--color-paper-2) 0);
+  box-shadow: 0 0 0 2px var(--color-scrim), 0 8px 28px var(--color-scrim);
 }
-.score .n { font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xl); color: var(--color-accent); }
-.score .of { font-family: var(--font-display); font-weight: 600; font-size: var(--text-md); color: var(--color-muted); }
+/* сердцевина медали — цвет страницы: кольцо читается и поверх обоев, и поверх панели */
+.score::before { content: ""; position: absolute; inset: 5px; border-radius: 999px; background: var(--color-paper); }
+.score .n {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  line-height: 1;
+  text-align: center;
+  color: var(--color-accent);
+}
+.score .of {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--color-neutral);
+}
 /* половинная оценка: запятая ниже и мельче — иначе висит посреди цифр */
 .score .sep { display: inline-block; transform: translateY(0.16em); font-size: 0.85em; }
-/* оценки пока нет — прочерк не претендует на акцент */
+/* оценки нет — вместо дуги плотный тёмный кружок с тонким контуром: пустое кольцо кричит зря */
+.score--tbd, .score--drop { background: var(--color-scrim); border: 1px solid var(--color-rule); }
+.score--tbd::before, .score--drop::before { inset: 0; background: var(--color-scrim); }
 .score--tbd .n { color: var(--color-neutral); }
+.score--drop .n { font-size: var(--text-md); }
 
-.drop-tag, .now-tag { color: var(--color-accent); }
-.platform { text-transform: uppercase; }
 .share {
   all: unset;
   cursor: pointer;
   color: var(--color-neutral);
   display: inline-flex;
 }
-.share svg { width: 16px; height: 16px; }
 .share .i-check { display: none; }
 .share.ok { color: var(--color-accent); cursor: default; }
 .share.ok .i-share { display: none; }
@@ -218,32 +266,21 @@ h2, h3, h4 {
 .share:hover { color: var(--color-accent); }
 .share:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
 
-/* плашка магазина: иконка + подпись в цветах Steam, при наведении — свечение */
+/* плашка магазина: тот же чип, только в цветах Steam и со свечением при наведении */
 .storelink {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  margin-inline-start: var(--space-2xs);
-  padding: 2px var(--space-xs);
-  border: 1px solid var(--color-steam-edge);
-  border-radius: var(--radius-sm);
+  border-color: var(--color-steam-edge);
   background: var(--color-steam-bg);
   color: var(--color-steam);
   text-decoration: none;
-  white-space: nowrap;
   transition: box-shadow var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
 }
-.storelink svg { width: 14px; height: 14px; }
+.storelink svg { width: 13px; height: 13px; }
 .storelink:hover {
   border-color: var(--color-steam);
   color: oklch(92% 0.06 235);
   box-shadow: 0 0 0 1px oklch(78% 0.13 235 / 0.5), 0 0 18px oklch(78% 0.13 235 / 0.55);
 }
 .storelink:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-
-.rev { color: var(--color-accent); text-decoration: none; }
-.rev:hover { text-decoration: underline; text-underline-offset: 3px; }
-.rev:active { color: var(--color-ink); }
 
 /* ———— медиа ———— */
 .glass--media { display: grid; gap: var(--space-md); }
@@ -488,9 +525,12 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
 @media (max-width: 48rem) {
   .site-head { padding-inline-end: var(--pad-x); }
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
+  .glass.note { padding-top: var(--space-md); }
   .toc-btn, .tocd, .reveal::after { backdrop-filter: none; }
-  .glass .meta { padding-inline-end: 3.5rem; }
-  .score { top: var(--space-md); right: var(--space-md); }
+  .glass .meta::before { display: none; }   /* медаль ушла в поток — место резервировать не от чего */
+  /* на узком экране медаль не свисает с кромки, а встаёт в поток над метой.
+     relative, а не static: сердцевина ::before держится за саму медаль, иначе растекается на панель */
+  .score { position: relative; top: auto; right: auto; margin-bottom: var(--space-md); width: 5.5rem; box-shadow: none; }
   .score .n { font-size: var(--text-xl); }
   .hero .logo { max-height: 60px; }
   .hero .logo-text { font-size: var(--text-xl); }
