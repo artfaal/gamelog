@@ -2,8 +2,14 @@
   "name": "gamelog",
   "private": true,
   "type": "module",
+  "scripts": {
+    "lint": "eslint ."
+  },
   "dependencies": {
     "gray-matter": "^4.0.3",
     "marked": "^15.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.8.1"
   }
 }

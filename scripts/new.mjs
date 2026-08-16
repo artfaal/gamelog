@@ -66,9 +66,9 @@ if (existsSync(md)) {
     md,
     `---
 steam: ${appid}
-finished: ${new Date().toLocaleDateString("sv")}
-hours: 0
-score:            # 1–10; дропнул — убери score и поставь dropped: true
+finished: tbd     # дата финала; tbd = «сейчас играю»
+hours: tbd        # число часов или tbd
+score: tbd        # 1–10 или tbd; дропнул — убери score и поставь dropped: true
 verdict:
 draft: true
 ---

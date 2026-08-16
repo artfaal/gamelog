@@ -7,7 +7,6 @@
 :root {
   --color-paper:    oklch(13% 0.008 70);
   --color-paper-2:  oklch(16% 0.010 70);
-  --color-paper-3:  oklch(19% 0.012 70);
   --color-rule:     oklch(28% 0.010 70);
   --color-neutral:  oklch(60% 0.010 70);
   --color-muted:    oklch(72% 0.008 75);
@@ -19,6 +18,10 @@
   --color-scrim-solid:  oklch(11% 0.008 70 / 0.96);
   --color-scrim-mid:    oklch(10% 0.008 70 / 0.55);
   --color-scrim-0:      oklch(10% 0.008 70 / 0);
+  /* фирменные цвета Steam — плашка магазина узнаётся с одного взгляда */
+  --color-steam:      #66c0f4;
+  --color-steam-bg:   #1b2838;
+  --color-steam-edge: #2a475e;
 
   --font-display: "Cormorant Garamond", "Times New Roman", serif;
   --font-body:    "IBM Plex Sans", system-ui, sans-serif;
@@ -160,9 +163,18 @@ h2, h3, h4 {
   border-radius: var(--radius-md);
   padding: var(--space-lg);
   width: min(100% - 8rem, 76rem);
-  max-width: 76rem;
 }
-.glass .meta { display: block; margin-bottom: var(--space-sm); padding-inline-end: 5rem; color: var(--color-muted); }
+/* мета — строка-флекс: дата, теги, плашки и кнопки стоят на одной линии и переносятся целиком */
+.glass .meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-xs);
+  margin-bottom: var(--space-sm);
+  padding-inline-end: 5rem;
+  color: var(--color-muted);
+}
+.meta__sep { color: var(--color-rule); }
 .glass.note { position: relative; }
 .note p { max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
@@ -185,16 +197,16 @@ h2, h3, h4 {
 }
 .score .n { font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xl); color: var(--color-accent); }
 .score .of { font-family: var(--font-display); font-weight: 600; font-size: var(--text-md); color: var(--color-muted); }
+/* оценки пока нет — прочерк не претендует на акцент */
+.score--tbd .n { color: var(--color-neutral); }
 
-.drop-tag { color: var(--color-accent); }
+.drop-tag, .now-tag { color: var(--color-accent); }
 .platform { text-transform: uppercase; }
 .share {
   all: unset;
   cursor: pointer;
   color: var(--color-neutral);
   display: inline-flex;
-  vertical-align: -4px;
-  margin-inline-start: var(--space-sm);
 }
 .share svg { width: 16px; height: 16px; }
 .share .i-check { display: none; }
@@ -203,6 +215,29 @@ h2, h3, h4 {
 .share.ok .i-check { display: inline; }
 .share:hover { color: var(--color-accent); }
 .share:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* плашка магазина: иконка + подпись в цветах Steam, при наведении — свечение */
+.storelink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-inline-start: var(--space-2xs);
+  padding: 2px var(--space-xs);
+  border: 1px solid var(--color-steam-edge);
+  border-radius: var(--radius-sm);
+  background: var(--color-steam-bg);
+  color: var(--color-steam);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: box-shadow var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
+}
+.storelink svg { width: 14px; height: 14px; }
+.storelink:hover {
+  border-color: var(--color-steam);
+  color: oklch(92% 0.06 235);
+  box-shadow: 0 0 0 1px oklch(78% 0.13 235 / 0.5), 0 0 18px oklch(78% 0.13 235 / 0.55);
+}
+.storelink:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 .rev { color: var(--color-accent); text-decoration: none; }
 .rev:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -237,6 +272,8 @@ h2, h3, h4 {
   margin-bottom: var(--space-xs);
 }
 .moment figcaption p { color: var(--color-muted); max-width: 65ch; margin-bottom: var(--space-sm); }
+/* место под видео резервируется заранее — лента не дёргается, пока грузится метадата */
+.moment video.clip { aspect-ratio: 16 / 9; object-fit: contain; background: var(--color-scrim); }
 
 /* ———— спойлеры ———— */
 .spoiler {
@@ -251,9 +288,11 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .spoiler.open { filter: none; cursor: auto; }
 .moment.is-spoiler { position: relative; }
 .moment.is-spoiler:not(.open) img,
+.moment.is-spoiler:not(.open) video,
 .moment.is-spoiler:not(.open) figcaption { filter: blur(14px); pointer-events: none; }
 /* плашка лежит в ячейке кадра — по центру заблюренного изображения */
-.moment.is-spoiler .shotbtn { grid-area: 1 / 1; }
+.moment.is-spoiler .shotbtn,
+.moment.is-spoiler .clip { grid-area: 1 / 1; }
 .moment.is-spoiler figcaption { grid-area: 1 / 2; }
 .reveal {
   all: unset;
@@ -337,7 +376,7 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .tocd__grid a img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 3px; }
 .tocd__grid a:hover { border-color: var(--color-neutral); }
 .tocd__grid a.on { border-color: var(--color-accent); }
-.tocd__drop {
+.tocd__tag {
   position: absolute;
   bottom: var(--space-2xs);
   left: var(--space-2xs);
@@ -387,24 +426,61 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   max-width: min(96vw, 120rem);
 }
 .lb::backdrop { background: var(--color-scrim-strong); }
-.lb img { max-width: 100%; max-height: 84dvh; width: auto; }
-.lb .cap { margin-top: var(--space-sm); }
+/* сцена ловит фокус при открытии (чтобы не подсвечивался крестик) — рамка ей не нужна */
+.lb__stage { display: grid; place-items: center; }
+.lb__stage:focus, .lb__stage:focus-visible { outline: none; }
+.lb__stage img, .lb__stage video { max-width: 100%; max-height: 84dvh; width: auto; }
+.lb .cap { margin-top: var(--space-sm); display: flex; justify-content: space-between; gap: var(--space-md); }
+.lb__count { white-space: nowrap; }
+/* края кадра — зоны перелистывания: стрелка проявляется на наведении, с клавиатуры — по фокусу */
+.lb__nav {
+  all: unset;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(3.5rem, 14%, 9rem);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  color: var(--color-ink);
+  opacity: 0;
+  transition: opacity var(--dur-short) var(--ease-out);
+}
+.lb__nav--prev { left: 0; }
+.lb__nav--next { right: 0; }
+.lb:hover .lb__nav, .lb__nav:focus-visible { opacity: 1; }
+.lb__nav svg {
+  width: 40px;
+  height: 40px;
+  padding: var(--space-xs);
+  background: var(--color-scrim-strong);
+  border: 1px solid var(--color-rule);
+  border-radius: 50%;
+}
+.lb__nav:hover svg { color: var(--color-accent); border-color: var(--color-accent); }
+.lb__nav:focus-visible svg { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.lb__nav[hidden] { display: none; }
 
-/* общий крестик диалогов */
+/* общий крестик диалогов — мягкий кружок поверх кадра: глиф на светлом скрине терялся */
 dialog .x {
   all: unset;
   cursor: pointer;
   position: absolute;
   top: var(--space-sm);
   right: var(--space-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-md);
+  z-index: var(--z-nav);
+  display: grid;
+  place-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
   color: var(--color-muted);
-  padding: var(--space-2xs) var(--space-xs);
-  line-height: 1;
+  background: var(--color-scrim-mid);
+  transition: color var(--dur-micro) var(--ease-out), background var(--dur-micro) var(--ease-out);
 }
-dialog .x:hover { color: var(--color-ink); }
-dialog .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: var(--radius-sm); }
+dialog .x svg { width: 18px; height: 18px; }
+dialog .x:hover { color: var(--color-ink); background: var(--color-scrim-strong); }
+dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* ———— мобилка ———— */
 @media (max-width: 48rem) {
@@ -419,6 +495,7 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); border-radius: 
   .body { margin-top: -10svh; }
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
+  .lb__nav { opacity: 1; }   /* без hover стрелки видны всегда */
   .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
   .toc-btn .toc-btn__label, .top-btn .toc-btn__label { display: none; }
   .top-btn { right: auto; left: max(var(--space-md), env(safe-area-inset-left)); bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }

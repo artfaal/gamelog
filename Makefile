@@ -1,10 +1,13 @@
-# gamelog: build — прод-сборка; drafts — с черновиками; serve — локальный просмотр; deploy — на orion
+# gamelog: check — линт; build — прод-сборка; drafts — с черновиками; serve — просмотр; deploy — на orion
 DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
-build:
+check:
+	npm run lint
+
+build: check
 	node scripts/build.mjs
 
-drafts:
+drafts: check
 	node scripts/build.mjs --drafts
 
 serve: drafts
@@ -14,4 +17,4 @@ serve: drafts
 deploy: build
 	rsync -az --delete dist/ $(DEPLOY_DEST)
 
-.PHONY: build drafts serve deploy
+.PHONY: check build drafts serve deploy

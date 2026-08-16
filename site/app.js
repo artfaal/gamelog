@@ -1,6 +1,8 @@
 // Хроника: оглавление, лайтбокс, спойлеры, видео-в-кадре, scroll-spy.
 // Ванильный JS, состояние — только DOM-классы.
 
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
 // — оглавление: нативный переход по якорю, диалог просто закрывается —
 const tocd = document.getElementById("tocd");
 document.getElementById("toc-btn").addEventListener("click", () => tocd.showModal());
@@ -26,13 +28,13 @@ document.addEventListener("click", e => {
   if (reveal) {
     const fig = reveal.closest(".moment");
     fig.classList.add("open");
-    fig.querySelectorAll("[aria-hidden], [inert]").forEach(el => {
-      el.removeAttribute("aria-hidden"); el.removeAttribute("inert");
-    });
+    fig.querySelectorAll("[inert]").forEach(el => el.removeAttribute("inert"));
     reveal.remove();
-    const target = fig.querySelector(".shotbtn") ?? fig.querySelector("figcaption");
-    if (target && !("focus" in target && target.tabIndex >= 0)) target.tabIndex = -1;
-    target?.focus();
+    const vid = fig.querySelector("video");
+    if (vid && !reduceMotion.matches) vid.play().catch(() => {});   // раскрыли момент — видео идёт
+    const target = vid ?? fig.querySelector(".shotbtn") ?? fig.querySelector("figcaption");
+    if (target.tabIndex < 0) target.tabIndex = -1;
+    target.focus();
   }
 });
 
@@ -51,30 +53,67 @@ document.addEventListener("click", async e => {
   }, 1500);
 });
 
-// — лайтбокс: кадры-кнопки, доступно с клавиатуры —
+// — лайтбокс: все медиа записи одной лентой, листается стрелками и кликом по краям —
 const lb = document.getElementById("lb");
-const lbImg = document.getElementById("lb-img");
+const lbStage = document.getElementById("lb-stage");
 const lbCap = document.getElementById("lb-cap");
-document.addEventListener("click", e => {
-  const btn = e.target.closest("button.shotbtn");
-  if (!btn || lb.open) return;
-  if (btn.closest(".moment.is-spoiler:not(.open)")) return; // сперва раскрыть спойлер
-  const im = btn.querySelector("img");
-  lbImg.src = im.src;
-  lbImg.alt = im.alt;
-  lbCap.textContent = im.alt;
+const lbCount = document.getElementById("lb-count");
+const lbPrev = document.getElementById("lb-prev");
+const lbNext = document.getElementById("lb-next");
+let reel = [], pos = 0;
+
+// лента записи в порядке вёрстки: клип шапки, кадры, моменты; спойлер до раскрытия не листается
+const reelOf = el => [...el.closest("article.stage").querySelectorAll(".shotbtn img, video.clip")]
+  .filter(m => !m.closest(".moment.is-spoiler:not(.open)"));
+
+const lbShow = () => {
+  const src = reel[pos];
+  const cap = src.alt || src.getAttribute("aria-label") || "";
+  const node = document.createElement(src.tagName === "VIDEO" ? "video" : "img");
+  node.src = src.src;
+  if (node.tagName === "VIDEO") node.controls = node.loop = node.playsInline = true;
+  else node.alt = cap;
+  lbStage.replaceChildren(node);
+  if (node.tagName === "VIDEO" && !reduceMotion.matches) node.play().catch(() => {});
+  lbCap.textContent = cap;
+  lbCount.textContent = reel.length > 1 ? `${pos + 1} / ${reel.length}` : "";
+  lbPrev.hidden = lbNext.hidden = reel.length < 2;
+};
+const lbGo = d => { pos = (pos + d + reel.length) % reel.length; lbShow(); };
+const lbOpen = media => {
+  reel = reelOf(media);
+  pos = reel.indexOf(media);
+  lbShow();
   lb.showModal();
+};
+
+// вход в лайтбокс — кадром; ролики листаются внутри, уже открытым
+document.addEventListener("click", e => {
+  const shot = e.target.closest("button.shotbtn");
+  if (!shot) return;
+  if (shot.closest(".moment.is-spoiler:not(.open)")) return; // сперва раскрыть спойлер
+  lbOpen(shot.querySelector("img"));
 });
+lbPrev.addEventListener("click", () => lbGo(-1));
+lbNext.addEventListener("click", () => lbGo(1));
 document.getElementById("lb-x").addEventListener("click", () => lb.close());
-lb.addEventListener("click", () => lb.close());  // клик в любом месте закрывает
-lb.addEventListener("close", () => { lbImg.src = ""; });
+// клик мимо кнопок закрывает; ролик исключён — там свои контролы
+lb.addEventListener("click", e => { if (!e.target.closest("button, video")) lb.close(); });
+lb.addEventListener("keydown", e => {
+  if (e.target.closest("video")) return;   // в плеере стрелки перематывают, а не листают
+  if (e.key === "ArrowLeft") lbGo(-1);
+  else if (e.key === "ArrowRight") lbGo(1);
+});
+lb.addEventListener("close", () => lbStage.replaceChildren());
 
 // — видео: играет в кадре, пауза вне; ручная пауза уважается —
 {
-  const autoplay = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const autoplay = !reduceMotion.matches;
   const vio = new IntersectionObserver(es => es.forEach(e => {
     const v = e.target;
-    if (e.isIntersecting) { if (autoplay && !v.dataset.manual) v.play().catch(() => {}); }
+    if (e.isIntersecting) {
+      if (autoplay && !v.dataset.manual && !v.closest(".moment.is-spoiler:not(.open)")) v.play().catch(() => {});
+    }
     else if (!v.paused) { v.dataset.io = "1"; v.pause(); }
   }), { threshold: 0.35 });
   document.querySelectorAll("video.clip").forEach(v => {
@@ -94,7 +133,7 @@ new IntersectionObserver(es =>
 ).observe(document.querySelector(".site-head"));
 topBtn.addEventListener("click", () => scrollTo({
   top: 0,
-  behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  behavior: reduceMotion.matches ? "auto" : "smooth",
 }));
 
 // — scroll-spy: активная запись в оглавлении —

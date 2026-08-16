@@ -22,9 +22,12 @@ const plural = (n, one, few, many) => {
 };
 const ruHours = n => plural(n, "час", "часа", "часов");
 const ruGames = n => plural(n, "игра", "игры", "игр");
+// tbd — «пока неизвестно»: годится для finished, hours и score
+const TBD = "tbd";
+const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
-  '<button type="button" class="spoiler" aria-expanded="false" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
+  '<button type="button" class="spoiler" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
 const mdToHtml = md => marked.parse(spoilers(md));
 
 // ---------- чтение и валидация записей ----------
@@ -41,7 +44,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   }
   // ошибки драфта не валят сборку — драфт просто пропускается с предупреждением
   const errs = [];
-  const fail = (_f, msg) => errs.push(msg);
+  const fail = msg => errs.push(msg);
 
   // YAML отдаёт даты Date-объектом — нормализуем в ISO и сверяем с исходной строкой
   // (невозможную дату 2026-02-31 YAML молча превращает в 2026-03-03)
@@ -52,47 +55,51 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     const t = Date.parse(`${d}T00:00:00Z`);
     return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === d;
   };
-  if (!isoOk(String(fm.finished)) || (rawDate && rawDate !== fm.finished))
-    fail(f, `кривая дата finished: ${rawDate ?? fm.finished}`);
-  if (!Number.isFinite(fm.hours) || fm.hours < 0) fail(f, `hours должно быть числом: ${fm.hours}`);
-  if (fm.dropped !== undefined && typeof fm.dropped !== "boolean") fail(f, `dropped должен быть true/false: ${fm.dropped}`);
+  if (fm.finished !== TBD && (!isoOk(String(fm.finished)) || (rawDate && rawDate !== fm.finished)))
+    fail(`кривая дата finished: ${rawDate ?? fm.finished}`);
+  if (fm.hours !== TBD && (!Number.isFinite(fm.hours) || fm.hours < 0))
+    fail(`hours должно быть числом или tbd: ${fm.hours}`);
+  if (fm.dropped !== undefined && typeof fm.dropped !== "boolean") fail(`dropped должен быть true/false: ${fm.dropped}`);
   const dropped = fm.dropped === true;
-  if (dropped && fm.score != null) fail(f, "dropped: true несовместим со score");
-  if (!dropped && !(Number.isInteger(fm.score) && fm.score >= 1 && fm.score <= 10))
-    fail(f, "нужен score 1–10 — или dropped: true");
+  // finished: tbd — запись «сейчас играю»: игра ещё идёт, даты финала нет
+  const playing = fm.finished === TBD;
+  if (dropped && playing) fail("дроп уже случился — у dropped: true нужна дата finished");
+  if (dropped && fm.score != null) fail("у дропа оценки нет — убери строку score");
+  if (!dropped && fm.score !== TBD && !(Number.isInteger(fm.score) && fm.score >= 1 && fm.score <= 10))
+    fail("нужен score 1–10 или tbd — или dropped: true");
   if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
-    fail(f, `clip должен быть store, none или media/…: ${fm.clip}`);
-  if (fm.shots != null && !Array.isArray(fm.shots)) fail(f, `shots должен быть списком: ${fm.shots}`);
-  if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail(f, "нужен verdict — одна строка вердикта");
+    fail(`clip должен быть store, none или media/…: ${fm.clip}`);
+  if (fm.shots != null && !Array.isArray(fm.shots)) fail(`shots должен быть списком: ${fm.shots}`);
+  if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail("нужен verdict — одна строка вердикта");
 
   let steam = null;
   if (fm.steam) {
     if (existsSync(`cache/${fm.steam}.json`)) steam = JSON.parse(readFileSync(`cache/${fm.steam}.json`, "utf8"));
-    else fail(f, `нет cache/${fm.steam}.json — запусти: node scripts/new.mjs ${fm.steam}`);
-  } else if (!fm.hero) fail(f, "нужно поле steam: <appid> — или hero: media/…");
+    else fail(`нет cache/${fm.steam}.json — запусти: node scripts/new.mjs ${fm.steam}`);
+  } else if (!fm.hero) fail("нужно поле steam: <appid> — или hero: media/…");
 
   const media = p => {
     if (typeof p === "number") {
-      if (!steam || !(p in steam.shots)) { fail(f, `нет магазинного скрина №${p}`); return null; }
+      if (!steam || !(p in steam.shots)) { fail(`нет магазинного скрина №${p}`); return null; }
       return steam.shots[p];
     }
     const ref = String(p).replace(/^\.\//, "");
     if (/^https?:\/\//.test(ref)) return ref;
-    if (!ref.startsWith("media/") || ref.includes("..")) { fail(f, `медиа-ссылка должна быть номером скрина, https://… или media/…: ${p}`); return null; }
+    if (!ref.startsWith("media/") || ref.includes("..")) { fail(`медиа-ссылка должна быть номером скрина, https://… или media/…: ${p}`); return null; }
     if (!existsSync(`content/${ref}`) || !statSync(`content/${ref}`).isFile())
-      { fail(f, `нет файла content/${ref}`); return null; }
+      { fail(`нет файла content/${ref}`); return null; }
     return ref;
   };
 
   // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref) / текст)
   const parts = body.split(/^## Моменты\s*$/m);
-  if (parts.length > 2) fail(f, "секция «## Моменты» должна быть одна");
+  if (parts.length > 2) fail("секция «## Моменты» должна быть одна");
   const [main, momentsRaw] = parts;
   const moments = [];
   if (momentsRaw !== undefined) {
     const chunks = momentsRaw.split(/^### /m);
-    if (chunks[0].trim()) fail(f, "текст между «## Моменты» и первым «### » потеряется — убери его");
-    if (chunks.length === 1) fail(f, "секция «## Моменты» пуста — нужен хотя бы один «### Заголовок»");
+    if (chunks[0].trim()) fail("текст между «## Моменты» и первым «### » потеряется — убери его");
+    if (chunks.length === 1) fail("секция «## Моменты» пуста — нужен хотя бы один «### Заголовок»");
     for (const chunk of chunks.slice(1)) {
       const [head, ...lines] = chunk.split("\n");
       const spoiler = /\{spoiler\}/.test(head);
@@ -103,7 +110,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
         if (a) alt = a;
         return "";
       });
-      if (/!\[[^\]]*\]\(/.test(text)) fail(f, `в моменте «${title}» больше одной картинки — оставь одну`);
+      if (/!\[[^\]]*\]\(/.test(text)) fail(`в моменте «${title}» больше одной картинки — оставь одну`);
       moments.push({ title, spoiler, shot, alt, html: mdToHtml(text.trim()) });
     }
   }
@@ -119,6 +126,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
     clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? media(fm.clip) : steam?.micro ?? null,
     dropped,
+    playing,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
     moments,
@@ -136,7 +144,9 @@ if (!DRAFTS && entries.length === 0) {
   console.error("прод-сборка пуста: ни одной записи без draft — deploy отменён");
   process.exit(1);
 }
+// «сейчас играю» — наверх ленты, дальше по дате финала
 entries.sort((a, b) =>
+  (b.playing - a.playing) ||
   String(b.fm.finished).localeCompare(String(a.fm.finished)) || a.slug.localeCompare(b.slug));
 
 // Steam-ассеты кэшируются локально (cache/assets, вне git) и раздаются со своего домена —
@@ -178,38 +188,66 @@ for (const e of entries) {
 }
 
 // ---------- рендер ----------
+// иконки интерфейса — svg, а не глифы: не зависят от набора символов в шрифте
+const icon = (paths, cls = "") =>
+  `<svg${cls ? ` class="${cls}"` : ""} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const I_CLOSE = icon('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>');
+const I_PREV = icon('<polyline points="15 18 9 12 15 6"/>');
+const I_NEXT = icon('<polyline points="9 18 15 12 9 6"/>');
+const I_SHARE = icon('<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>', "i-share");
+const I_CHECK = icon('<polyline points="20 6 9 17 4 12"/>', "i-check");
+// логотип Steam — simple-icons (CC0)
+const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>`;
+
 const metaLine = e => {
-  const parts = [ruDate(e.fm.finished)];
-  parts.push(e.dropped ? `${ruHours(e.fm.hours)} · <span class="drop-tag">дропнул</span>` : `${ruHours(e.fm.hours)} в игре`);
+  const parts = [e.playing ? '<span class="now-tag">сейчас играю</span>' : ruDate(e.fm.finished)];
+  // hours: tbd — часов просто нет в строке, выдумывать нечего
+  const hrs = e.fm.hours === TBD ? null : ruHours(e.fm.hours);
+  if (hrs) parts.push(e.dropped ? hrs : `${hrs} в игре`);
+  if (e.dropped) parts.push('<span class="drop-tag">дропнул</span>');
   if (e.fm.platform) parts.push(`<span class="platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
-    const label = s.dropped
-      ? `первый заход — дроп в ${String(s.fm.finished).slice(0, 4)}`
-      : `${s.fm.finished > e.fm.finished ? "вернулся и прошёл" : "прошёл"} в ${String(s.fm.finished).slice(0, 4)}`;
+    const year = String(s.fm.finished).slice(0, 4);
+    let label;
+    if (s.playing) label = "сейчас играю";
+    else if (s.dropped) label = `первый заход — дроп в ${year}`;
+    else if (s.fm.finished > e.fm.finished) label = `вернулся и прошёл в ${year}`;
+    else label = `прошёл в ${year}`;
     parts.push(`<a class="rev" href="#${s.slug}">${label} ↗</a>`);
   }
   const share = `<button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой на запись" title="Поделиться">
-    <svg class="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-    <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+    ${I_SHARE}${I_CHECK}
   </button>`;
-  return parts.join(" · ") + share;
+  // есть appid — даём читателю прямой путь на страницу игры в магазине
+  const store = e.fm.steam
+    ? `<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
+        aria-label="Открыть ${esc(e.name)} в Steam" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`
+    : "";
+  // каждый кусок меты — свой элемент строки: разделители не липнут к соседям при переносе
+  return parts.join('<span class="meta__sep" aria-hidden="true">·</span>') + store + share;
 };
 
-const clipHtml = e => e.clip
-  ? `<video class="clip" src="${esc(e.clip)}" muted loop playsinline controls preload="none"
-      poster="${esc(e.shots[0] ?? e.hero)}" aria-label="Видео: ${esc(e.name)}"></video>`
-  : "";
+// закрытый спойлер прячется одним inert: он же убирает содержимое из чтения скринридером
+const videoHtml = (src, label, { poster = "", preload = "none", hidden = false } = {}) =>
+  `<video class="clip" src="${esc(src)}" muted loop playsinline controls preload="${preload}"${poster ? ` poster="${esc(poster)}"` : ""}
+      aria-label="Видео: ${esc(label)}"${hidden ? " inert" : ""}></video>`;
 
 // кадр — кнопка: лайтбокс доступен с клавиатуры
 const shotHtml = (src, alt, hidden = false) =>
-  `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}"${hidden ? ' aria-hidden="true"' : ""} loading="lazy" width="1920" height="1080"></button>`;
+  `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="1920" height="1080"></button>`;
+
+const momentMedia = m =>
+  !m.shot ? ""
+  : isVideo(m.shot)
+  ? videoHtml(m.shot, m.alt, { preload: "metadata", hidden: m.spoiler })
+  : shotHtml(m.shot, m.alt, m.spoiler);
 
 const momentsHtml = e => e.moments.length
   ? `<div class="glass"><div class="moments"><h4 class="moments__title">Моменты</h4>${e.moments.map(m => `
       <figure class="moment${m.spoiler ? " is-spoiler" : ""}">
         ${m.spoiler ? '<button type="button" class="reveal" aria-label="Спойлер — показать"></button>' : ""}
-        ${m.shot ? shotHtml(m.shot, m.alt, m.spoiler) : ""}
-        <figcaption${m.spoiler ? ' aria-hidden="true" inert' : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
+        ${momentMedia(m)}
+        <figcaption${m.spoiler ? " inert" : ""}><strong>${esc(m.title)}</strong>${m.html}</figcaption>
       </figure>`).join("")}</div></div>`
   : "";
 
@@ -217,11 +255,13 @@ const entryHtml = (e, i) => {
   const logo = e.logo
     ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo" src="${esc(e.logo)}" alt="" loading="lazy">`
     : `<h2 class="logo-text">${esc(e.name)}</h2>`;
-  const score = e.dropped ? "" :
-    `<span class="score" aria-label="Оценка ${e.fm.score} из 10"><span class="n">${e.fm.score}</span><span class="of">из 10</span></span>`;
+  const score = e.dropped ? ""
+    : e.fm.score === TBD
+    ? `<span class="score score--tbd" aria-label="Оценки пока нет"><span class="n">—</span><span class="of">из 10</span></span>`
+    : `<span class="score" aria-label="Оценка ${e.fm.score} из 10"><span class="n">${e.fm.score}</span><span class="of">из 10</span></span>`;
   const mediaPanel = e.dropped || (!e.clip && !e.shots.length) ? "" : `
     <div class="glass glass--media">
-      ${clipHtml(e)}
+      ${e.clip ? videoHtml(e.clip, e.name, { poster: e.shots[0] ?? e.hero }) : ""}
       ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map((s, n) => shotHtml(s, `Кадр ${n + 1} из ${e.name}`)).join("")}</div>` : ""}
     </div>`;
   return `
@@ -246,7 +286,7 @@ const entryHtml = (e, i) => {
 // оглавление: год-группы с сеткой постеров — масштабируется на десятки игр
 const byYear = new Map();
 entries.forEach((e, i) => {
-  const y = String(e.fm.finished).slice(0, 4);
+  const y = e.playing ? "сейчас" : String(e.fm.finished).slice(0, 4);
   if (!byYear.has(y)) byYear.set(y, []);
   byYear.get(y).push([e, i]);
 });
@@ -255,15 +295,17 @@ const tocHtml = [...byYear].map(([y, items]) => `
     <h3 class="mono">${y}</h3>
     <div class="tocd__grid">${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}"
-         aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : ""}">
+         aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : e.playing ? " (сейчас играю)" : ""}">
         <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
-        ${e.dropped ? '<span class="tocd__drop mono">дроп</span>' : ""}
+        ${e.dropped ? '<span class="tocd__tag mono">дроп</span>'
+          : e.playing ? '<span class="tocd__tag mono">играю</span>' : ""}
       </a>`).join("")}</div>
   </section>`).join("");
 
-const games = new Set(entries.filter(e => !e.dropped).map(gameKey)).size;
+// счётчик игр — только пройденные: дроп и «сейчас играю» в него не идут
+const games = new Set(entries.filter(e => !e.dropped && !e.playing).map(gameKey)).size;
 // ponytail: часы суммируются по всем заходам, включая дропы — это «наиграно всего»
-const hours = entries.reduce((s, e) => s + (e.fm.hours ?? 0), 0);
+const hours = entries.reduce((s, e) => s + (typeof e.fm.hours === "number" ? e.fm.hours : 0), 0);
 
 const page = `<!doctype html>
 <html lang="ru">
@@ -295,14 +337,16 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
   <span class="mono">Ассеты игр — Steam · <a href="https://artfaal.ru">artfaal</a></span>
 </footer>
 <dialog class="tocd" id="tocd" aria-labelledby="tocd-title">
-  <button class="x" id="tocd-x" aria-label="Закрыть">✕</button>
+  <button class="x" id="tocd-x" aria-label="Закрыть">${I_CLOSE}</button>
   <h2 class="tocd__title" id="tocd-title">Оглавление</h2>
   <nav class="tocd__list" id="tocd-list" aria-label="Список игр">${tocHtml}</nav>
 </dialog>
-<dialog class="lb" id="lb" aria-label="Кадр во весь экран">
-  <button class="x" id="lb-x" aria-label="Закрыть">✕</button>
-  <img id="lb-img" alt="">
-  <p class="mono cap" id="lb-cap"></p>
+<dialog class="lb" id="lb" aria-label="Медиа записи">
+  <button class="x" id="lb-x" aria-label="Закрыть">${I_CLOSE}</button>
+  <div class="lb__stage" id="lb-stage" tabindex="-1" autofocus></div>
+  <p class="cap"><span class="mono" id="lb-cap"></span><span class="mono lb__count" id="lb-count"></span></p>
+  <button class="lb__nav lb__nav--prev" id="lb-prev" aria-label="Предыдущее медиа">${I_PREV}</button>
+  <button class="lb__nav lb__nav--next" id="lb-next" aria-label="Следующее медиа">${I_NEXT}</button>
 </dialog>
 <script src="app.js"></script>
 </body>
