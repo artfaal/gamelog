@@ -22,10 +22,10 @@ const plural = (n, one, few, many) => {
 };
 const ruHours = n => plural(n, "час", "часа", "часов");
 const ruGames = n => plural(n, "игра", "игры", "игр");
-// оценка бывает половинной; цифры Cormorant — старого стиля (свисают ниже строки),
-// поэтому запятая отдельным span'ом, её сажает на место .score .sep
-const ruScore = n => String(n).replace(".", '<span class="sep">,</span>');
-const ruScoreLabel = n => String(n).replace(".", ",");
+// оценка бывает половинной: 8.5 → 8,5. Запятую не двигаем — цифры Cormorant
+// свисают ниже строки по-разному (7 и 9 да, 8 и 6 нет), и любой сдвиг ровен
+// для одной пары и кривой для другой
+const ruScore = n => String(n).replace(".", ",");
 // tbd — «пока неизвестно»: годится для finished, hours и score
 const TBD = "tbd";
 const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
@@ -277,7 +277,7 @@ const entryHtml = (e, i) => {
     ? medal(" score--drop", "Дроп — оценки нет", "дроп")
     : e.fm.score === TBD
     ? medal(" score--tbd", "Оценки пока нет", `—<span class="of">из 10</span>`)
-    : medal("", `Оценка ${ruScoreLabel(e.fm.score)} из 10`,
+    : medal("", `Оценка ${ruScore(e.fm.score)} из 10`,
         `${ruScore(e.fm.score)}<span class="of">из 10</span>`, ` style="--v:${e.fm.score}"`);
   const mediaPanel = !e.clip && !e.shots.length ? "" : `
     <div class="glass glass--media">
@@ -294,7 +294,7 @@ const entryHtml = (e, i) => {
       <div class="glass note${e.dropped ? " is-drop" : ""}">
         ${score}
         <span class="mono meta">${metaLine(e)}</span>
-        <h3 class="verdict">${esc(e.fm.verdict ?? "")}</h3>
+        <h3 class="verdict"><span class="kicker" aria-hidden="true">${esc(e.name)}</span>${esc(e.fm.verdict ?? "")}</h3>
         ${e.html}
       </div>
       ${mediaPanel}

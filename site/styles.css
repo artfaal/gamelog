@@ -204,6 +204,20 @@ h2, h3, h4 {
 .glass.note { position: relative; padding-top: var(--space-xl); }
 .note p { max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
+/* название игры над вердиктом: логотип на арте при чтении уезжает вверх,
+   и запись перестаёт отвечать на «а это про что». aria-hidden — имя уже
+   озвучивает заголовок записи в hero */
+.kicker {
+  display: block;
+  margin-bottom: var(--space-2xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--color-neutral);
+}
 .verdict {
   font-family: var(--font-display);
   font-size: var(--text-xl);
@@ -251,8 +265,6 @@ h2, h3, h4 {
   letter-spacing: 0.1em;
   color: var(--color-neutral);
 }
-/* половинная оценка: запятая ниже и мельче — иначе висит посреди цифр */
-.score .sep { display: inline-block; transform: translateY(0.16em); font-size: 0.85em; }
 /* оценки нет — вместо дуги плотный тёмный кружок с тонким контуром: пустое кольцо кричит зря */
 .score--tbd, .score--drop { background: var(--color-scrim); border: 1px solid var(--color-rule); }
 .score--tbd::before, .score--drop::before { inset: 0; background: var(--color-scrim); }
