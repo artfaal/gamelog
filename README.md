@@ -44,7 +44,7 @@ node scripts/new.mjs 1145360            # appid из URL страницы игр
 steam: 1145360          # опционально: без него медиа задаётся руками (см. не-Steam)
 finished: 2026-07-12    # дата прохождения/дропа; tbd — «сейчас играю»
 hours: 41               # число или tbd
-score: 9                # 1–10 или tbd; у дропа score нет — вместо него dropped: true
+score: 9                # 1–10 (шаг 0.5) или tbd; у дропа score нет — вместо него dropped: true
 verdict: Одна строка — вердикт крупным шрифтом.
 shots: [0, 1]           # кадры записи: номера магазинных скринов или файлы из media/
 clip: store             # store (микротрейлер) | media/my.webm | none

@@ -21,6 +21,10 @@ const plural = (n, one, few, many) => {
   return `${n} ${(m100 >= 11 && m100 <= 14) ? many : m10 === 1 ? one : (m10 >= 2 && m10 <= 4) ? few : many}`;
 };
 const ruHours = n => plural(n, "час", "часа", "часов");
+// оценка бывает половинной; цифры Cormorant — старого стиля (свисают ниже строки),
+// поэтому запятая отдельным span'ом, её сажает на место .score .sep
+const ruScore = n => String(n).replace(".", '<span class="sep">,</span>');
+const ruScoreLabel = n => String(n).replace(".", ",");
 const ruGames = n => plural(n, "игра", "игры", "игр");
 // tbd — «пока неизвестно»: годится для finished, hours и score
 const TBD = "tbd";
@@ -65,8 +69,8 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   const playing = fm.finished === TBD;
   if (dropped && playing) fail("дроп уже случился — у dropped: true нужна дата finished");
   if (dropped && fm.score != null) fail("у дропа оценки нет — убери строку score");
-  if (!dropped && fm.score !== TBD && !(Number.isInteger(fm.score) && fm.score >= 1 && fm.score <= 10))
-    fail("нужен score 1–10 или tbd — или dropped: true");
+  if (!dropped && fm.score !== TBD && !(Number.isFinite(fm.score) && fm.score >= 1 && fm.score <= 10 && fm.score % 0.5 === 0))
+    fail("нужен score 1–10 с шагом 0,5 или tbd — или dropped: true");
   if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
     fail(`clip должен быть store, none или media/…: ${fm.clip}`);
   if (fm.shots != null && !Array.isArray(fm.shots)) fail(`shots должен быть списком: ${fm.shots}`);
@@ -258,7 +262,7 @@ const entryHtml = (e, i) => {
   const score = e.dropped ? ""
     : e.fm.score === TBD
     ? `<span class="score score--tbd" aria-label="Оценки пока нет"><span class="n">—</span><span class="of">из 10</span></span>`
-    : `<span class="score" aria-label="Оценка ${e.fm.score} из 10"><span class="n">${e.fm.score}</span><span class="of">из 10</span></span>`;
+    : `<span class="score" aria-label="Оценка ${ruScoreLabel(e.fm.score)} из 10"><span class="n">${ruScore(e.fm.score)}</span><span class="of">из 10</span></span>`;
   const mediaPanel = e.dropped || (!e.clip && !e.shots.length) ? "" : `
     <div class="glass glass--media">
       ${e.clip ? videoHtml(e.clip, e.name, { poster: e.shots[0] ?? e.hero }) : ""}

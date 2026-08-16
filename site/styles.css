@@ -197,6 +197,8 @@ h2, h3, h4 {
 }
 .score .n { font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xl); color: var(--color-accent); }
 .score .of { font-family: var(--font-display); font-weight: 600; font-size: var(--text-md); color: var(--color-muted); }
+/* половинная оценка: запятая ниже и мельче — иначе висит посреди цифр */
+.score .sep { display: inline-block; transform: translateY(0.16em); font-size: 0.85em; }
 /* оценки пока нет — прочерк не претендует на акцент */
 .score--tbd .n { color: var(--color-neutral); }
 

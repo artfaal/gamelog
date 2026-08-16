@@ -68,7 +68,7 @@ if (existsSync(md)) {
 steam: ${appid}
 finished: tbd     # дата финала; tbd = «сейчас играю»
 hours: tbd        # число часов или tbd
-score: tbd        # 1–10 или tbd; дропнул — убери score и поставь dropped: true
+score: tbd        # 1–10, можно с половиной (7.5), или tbd; дропнул — убери score и поставь dropped: true
 verdict:
 draft: true
 ---
