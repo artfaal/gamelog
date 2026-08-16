@@ -18,6 +18,9 @@
   --color-scrim-solid:  oklch(11% 0.008 70 / 0.96);
   --color-scrim-mid:    oklch(10% 0.008 70 / 0.55);
   --color-scrim-0:      oklch(10% 0.008 70 / 0);
+  /* пиктограммы чипов: дата и часы различаются цветом, а не только рисунком */
+  --color-ico-date:   oklch(76% 0.09 250);
+  --color-ico-hours:  oklch(78% 0.10 155);
   /* фирменные цвета Steam — плашка магазина узнаётся с одного взгляда */
   --color-steam:      #66c0f4;
   --color-steam-bg:   #1b2838;
@@ -189,6 +192,8 @@ h2, h3, h4 {
   vertical-align: middle;
 }
 .chip svg, .chip .share svg { width: 13px; height: 13px; opacity: 0.75; }
+.chip--date svg { color: var(--color-ico-date); opacity: 1; }
+.chip--hours svg { color: var(--color-ico-hours); opacity: 1; }
 .chip--flag { color: var(--color-accent); border-color: oklch(78% 0.14 75 / 0.4); }
 .chip--platform { text-transform: uppercase; }
 .chip--link { color: var(--color-accent); text-decoration: none; }
@@ -239,7 +244,8 @@ h2, h3, h4 {
 }
 .score .of {
   display: block;
-  margin-top: 3px;
+  /* цифры Cormorant старого стиля свисают ниже строки — «из 10» иначе липнет к ним */
+  margin-top: var(--space-xs);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.1em;

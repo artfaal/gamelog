@@ -217,9 +217,9 @@ const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
 const metaLine = e => {
   const parts = [e.playing
     ? `<span class="chip chip--flag">${I_PLAY}сейчас играю</span>`
-    : `<span class="chip">${I_CAL}${ruDate(e.fm.finished)}</span>`];
+    : `<span class="chip chip--date">${I_CAL}${ruDate(e.fm.finished)}</span>`];
   // hours: tbd — часов просто нет в строке, выдумывать нечего
-  if (e.fm.hours !== TBD) parts.push(`<span class="chip">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
+  if (e.fm.hours !== TBD) parts.push(`<span class="chip chip--hours">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
   if (e.fm.platform) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
     const year = String(s.fm.finished).slice(0, 4);
