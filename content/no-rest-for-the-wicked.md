@@ -3,7 +3,7 @@ steam: 1371980
 finished: 2026-03-09
 hours: 37
 score: 7.5
-verdict: Смесь Diablo и Dark Souls — вернусь на релизе.
+verdict: 37 часов в раннем доступе — и ушёл ждать релиз.
 shots: [6, 3]
 clip: media/nrftw-coop.mp4
 ---

@@ -3,7 +3,7 @@ steam: 3321460
 finished: 2026-05-18
 hours: 19
 dropped: true
-verdict: Красивая и неспешная — просто не пошла.
+verdict: 19 часов, чтобы понять — не моё.
 shots: [2, 5]
 clip: media/cd-trailer.mp4
 ---

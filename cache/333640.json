@@ -1,0 +1,18 @@
+{
+  "appid": 333640,
+  "name": "Caves of Qud",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/333640/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/333640/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/333640/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_0d7f344e2478cf941e174078297b5d2adde21567.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_796b188786b8978574444587bf9f4198fb18f724.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_fc17afe945a7d81473c1b2d728aa513ff2011fc2.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_66d82dec6de6943d34b56708f71c4287f0d8653e.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_be0b9ec895b5b2a791400dcc72eac8b8ba6f0dbe.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_866865918c8405c0633b54a273b9b444285abe39.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_f207b87584bd63682a57017f6f16c45cdd4f52be.1920x1080.jpg?t=1779204650",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/333640/ss_e2215a2b6e31bd0469e5ad4b1e54419401d486e4.1920x1080.jpg?t=1779204650"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/257079340/microtrailer.webm"
+}
