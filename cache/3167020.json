@@ -1,0 +1,18 @@
+{
+  "appid": 3167020,
+  "name": "Escape From Duckov",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/3167020/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/3167020/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/3167020/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_f89c284a734b7307df490813df82d4f85a981299.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_ffb859764420f62c612287f011361749a06b6432.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_b822619832ab8d2337b7e31a77c4311a5d168a97.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_0f96530f53f858cbaf4de595cb1a95ec6d016b26.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_67e534105478e4fe28ef84043f4a5db5ebb8bda5.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_da9e3ec33fdae7d02e4a2482321cf5376aafd6ee.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_915c641c0efd97c7bbf0fef8fda2e67d7302a4c7.1920x1080.jpg?t=1783321966",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3167020/ss_1fb04be631e3a74388048ccc9edd3fc647b65fe3.1920x1080.jpg?t=1783321966"
+  ],
+  "micro": null
+}
