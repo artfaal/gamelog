@@ -1,0 +1,18 @@
+{
+  "appid": 979110,
+  "name": "Space Haven",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/979110/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/979110/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/979110/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/ss_b1f27d81832ec796dbeeae639e6706b746813407.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/4aa2ed3080854ea5d26cc02f10c2f68b6921785b/ss_4aa2ed3080854ea5d26cc02f10c2f68b6921785b.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/ss_7720a13a5b083a3837d3653ae1a6d662ad56cc8f.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/169275ca339f84a42bbaeab652575aa0d68bf5c4/ss_169275ca339f84a42bbaeab652575aa0d68bf5c4.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/c190af26ae7da8cdf7b86edbdca79c8bb620bf22/ss_c190af26ae7da8cdf7b86edbdca79c8bb620bf22.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/69dbb1ca02a8f9a8de98e207c4d9cb7e53c3f26d/ss_69dbb1ca02a8f9a8de98e207c4d9cb7e53c3f26d.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/ss_a123836641fe5c8760dc7c46a437775eaf7f9e7f.1920x1080.jpg?t=1779957549",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/979110/aad11504605a39c86eef07e3006070e171bc5d52/ss_aad11504605a39c86eef07e3006070e171bc5d52.1920x1080.jpg?t=1779957549"
+  ],
+  "micro": null
+}
