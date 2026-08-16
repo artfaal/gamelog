@@ -28,6 +28,7 @@ export default [
         document: "readonly", location: "readonly", navigator: "readonly",
         matchMedia: "readonly", IntersectionObserver: "readonly",
         setTimeout: "readonly", scrollTo: "readonly",
+        scrollY: "readonly", addEventListener: "readonly",
       },
     },
     rules,

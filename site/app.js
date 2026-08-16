@@ -136,6 +136,16 @@ topBtn.addEventListener("click", () => scrollTo({
   behavior: reduceMotion.matches ? "auto" : "smooth",
 }));
 
+// — кнопки-таблетки не мешают чтению: на узком экране они уезжают, пока читатель
+//   едет вниз, и возвращаются, как только он двинулся вверх —
+let lastY = scrollY;
+addEventListener("scroll", () => {
+  const dy = scrollY - lastY;
+  if (Math.abs(dy) < 6) return;                       // дрожание пальца — не сигнал
+  document.body.classList.toggle("fabs-away", dy > 0 && scrollY > 200);
+  lastY = scrollY;
+}, { passive: true });
+
 // — scroll-spy: активная запись в оглавлении —
 const spy = new IntersectionObserver(es => {
   es.forEach(e => {

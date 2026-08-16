@@ -545,6 +545,12 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
   .glass.note { padding-top: var(--space-md); }
   .toc-btn, .tocd, .reveal::after { backdrop-filter: none; }
+  /* без блюра полупрозрачная кнопка пропускает текст, который под ней проезжает:
+     на мобилке фон сплошной, а тень отделяет плашку от полотна записи */
+  .toc-btn, .top-btn {
+    background: var(--color-scrim-solid);
+    box-shadow: 0 4px 18px var(--color-scrim);
+  }
   .glass .meta::before { display: none; }   /* медаль ушла в поток — место резервировать не от чего */
   /* на узком экране медаль не свисает с кромки, а встаёт в поток над метой.
      relative, а не static: сердцевина ::before держится за саму медаль, иначе растекается на панель */
@@ -557,6 +563,9 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .moment.is-spoiler figcaption { grid-area: auto; }
   .lb__nav { opacity: 1; }   /* без hover стрелки видны всегда */
   .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
+  /* уезжают, пока читатель едет вниз (класс ставит app.js), возвращаются на движении вверх */
+  .toc-btn, .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
+  .fabs-away .toc-btn, .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }
   .toc-btn .toc-btn__label, .top-btn .toc-btn__label { display: none; }
   .top-btn { right: auto; left: max(var(--space-md), env(safe-area-inset-left)); bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
 }
@@ -569,4 +578,6 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
     transition-duration: 150ms !important;
   }
   html { scroll-behavior: auto; }
+  /* кнопки не едут, а гаснут: пространственное движение здесь необязательное */
+  .fabs-away .toc-btn, .fabs-away .top-btn { transform: none; }
 }
