@@ -3,3 +3,5 @@ dist/
 content/media/*.webm
 content/media/*.mp4
 cache/assets/
+add_game.md
+shots/
