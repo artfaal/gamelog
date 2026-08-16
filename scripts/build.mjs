@@ -21,6 +21,7 @@ const plural = (n, one, few, many) => {
   return `${n} ${(m100 >= 11 && m100 <= 14) ? many : m10 === 1 ? one : (m10 >= 2 && m10 <= 4) ? few : many}`;
 };
 const ruHours = n => plural(n, "час", "часа", "часов");
+const ruGames = n => plural(n, "игра", "игры", "игр");
 // оценка бывает половинной; цифры Cormorant — старого стиля (свисают ниже строки),
 // поэтому запятая отдельным span'ом, её сажает на место .score .sep
 const ruScore = n => String(n).replace(".", '<span class="sep">,</span>');
@@ -311,13 +312,17 @@ const tocHtml = [...byYear].map(([y, items]) => `
       </a>`).join("")}</div>
   </section>`).join("");
 
+// счётчик считает всё подряд: дропы и «сейчас играю» тоже игры, часы — сумма всех заходов
+const games = new Set(entries.map(gameKey)).size;
+const hours = entries.reduce((s, e) => s + (typeof e.fm.hours === "number" ? e.fm.hours : 0), 0);
+
 const page = `<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Хроника</title>
-<meta name="description" content="Игровой дневник: впечатления, кадры, воспоминания.">
+<meta name="description" content="Игровой дневник: ${ruGames(games)}, ${ruHours(hours)}.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Хроника">
 <meta property="og:description" content="Игровой дневник: впечатления, кадры, воспоминания.">
@@ -331,6 +336,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 <body id="top">
 <header class="site-head">
   <h1 class="wordmark">Хроника</h1>
+  <span class="mono">${ruGames(games)} · ${hours} ч</span>
 </header>
 <button class="toc-btn" id="toc-btn" aria-haspopup="dialog" aria-label="Оглавление">☰<span class="toc-btn__label"> оглавление</span></button>
 <button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="toc-btn__label"> наверх</span></button>
@@ -404,4 +410,4 @@ for (const [rel, file] of toCopy) {
   mkdirSync(`dist/${rel.slice(0, rel.lastIndexOf("/"))}`, { recursive: true });
   cpSync(file, `dist/${rel}`);
 }
-console.log(`dist: ${entries.length} записей${DRAFTS ? " + драфты" : ""}`);
+console.log(`dist: ${entries.length} записей (${ruGames(games)}, ${hours} ч)${DRAFTS ? " + драфты" : ""}`);
