@@ -250,6 +250,9 @@ h2, h3, h4 {
 .score .n {
   position: relative;
   font-family: var(--font-display);
+  /* ровные цифры вместо старостильных: у Cormorant «7» и «5» свисают ниже строки,
+     а «8» стоит на ней — с ними запятая не может сесть ровно сразу в обеих парах */
+  font-variant-numeric: lining-nums;
   font-weight: 600;
   font-size: var(--text-2xl);
   line-height: 1;
