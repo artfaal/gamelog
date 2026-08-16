@@ -128,7 +128,11 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     logo: fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
     poster: fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
     shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
-    clip: fm.clip === "none" ? null : fm.clip && fm.clip !== "store" ? media(fm.clip) : steam?.micro ?? null,
+    // у дропа медиа по умолчанию нет — но заданные руками shots и clip показываются
+    clip: fm.clip === "none" ? null
+      : fm.clip && fm.clip !== "store" ? media(fm.clip)
+      : (fm.clip === "store" || !dropped) ? steam?.micro ?? null
+      : null,
     dropped,
     playing,
     html: mdToHtml(main.trim()),
@@ -263,7 +267,7 @@ const entryHtml = (e, i) => {
     : e.fm.score === TBD
     ? `<span class="score score--tbd" aria-label="Оценки пока нет"><span class="n">—</span><span class="of">из 10</span></span>`
     : `<span class="score" aria-label="Оценка ${ruScoreLabel(e.fm.score)} из 10"><span class="n">${ruScore(e.fm.score)}</span><span class="of">из 10</span></span>`;
-  const mediaPanel = e.dropped || (!e.clip && !e.shots.length) ? "" : `
+  const mediaPanel = !e.clip && !e.shots.length ? "" : `
     <div class="glass glass--media">
       ${e.clip ? videoHtml(e.clip, e.name, { poster: e.shots[0] ?? e.hero }) : ""}
       ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map((s, n) => shotHtml(s, `Кадр ${n + 1} из ${e.name}`)).join("")}</div>` : ""}
