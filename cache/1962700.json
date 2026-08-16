@@ -1,0 +1,16 @@
+{
+  "appid": 1962700,
+  "name": "Subnautica 2",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1962700/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1962700/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1962700/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/823b102b09530bbf588f5e9752cb52f1681dc992/ss_823b102b09530bbf588f5e9752cb52f1681dc992.1920x1080.jpg?t=1785967256",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/e631ef3b91faacacb5a2c823d0b979083548d66f/ss_e631ef3b91faacacb5a2c823d0b979083548d66f.1920x1080.jpg?t=1785967256",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/16b68b0941ed9c5ac1eea74e478fa726d425bebf/ss_16b68b0941ed9c5ac1eea74e478fa726d425bebf.1920x1080.jpg?t=1785967256",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/56159597a28edfb07c6dd27b4a00f2e06e571048/ss_56159597a28edfb07c6dd27b4a00f2e06e571048.1920x1080.jpg?t=1785967256",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/eab92bde7378f6532f765001126a8fb8b10ca8f9/ss_eab92bde7378f6532f765001126a8fb8b10ca8f9.1920x1080.jpg?t=1785967256",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/787e2315a1eb5aaba73c4f75e6f7d7d8835fa260/ss_787e2315a1eb5aaba73c4f75e6f7d7d8835fa260.1920x1080.jpg?t=1785967256"
+  ],
+  "micro": null
+}
