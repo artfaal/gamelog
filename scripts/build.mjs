@@ -124,8 +124,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     steam,
     name: fm.name ?? steam?.name ?? slug,
     hero: media(fm.hero ?? steam?.hero),
-    logo: fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
-    poster: fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
+    // none — у части игр логотипа и постера в Steam нет (404): имя рисуется
+    // текстом, в оглавление идёт кроп hero
+    logo: fm.logo === "none" ? null : fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
+    poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
     shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
     // у дропа медиа по умолчанию нет — но заданные руками shots и clip показываются
     clip: fm.clip === "none" ? null

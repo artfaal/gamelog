@@ -48,6 +48,8 @@ score: 9                # 1–10 (шаг 0.5) или tbd; у дропа score н
 verdict: Одна строка — вердикт крупным шрифтом.
 shots: [0, 1]           # кадры записи: номера магазинных скринов или файлы из media/
 clip: store             # store (микротрейлер) | media/my.webm | none
+logo: none              # у части игр логотипа и постера в Steam нет (404):
+poster: none            # logo: none — имя текстом, poster: none — кроп hero
 platform: switch        # опционально, пометка для не-Steam платформ
 draft: true             # убрать перед публикацией
 ---
