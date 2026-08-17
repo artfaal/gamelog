@@ -1,7 +1,7 @@
 ---
 steam: 2623190
 finished: 2026-01-22
-hours: 6
+hours: 9
 dropped: true
 verdict: Опоздал на эту игру лет на двадцать.
 shots: [0, 3]

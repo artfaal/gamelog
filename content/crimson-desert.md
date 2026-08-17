@@ -1,7 +1,7 @@
 ---
 steam: 3321460
 finished: 2026-05-18
-hours: 19
+hours: 16
 dropped: true
 verdict: 19 часов, чтобы понять — не моё.
 shots: [2, 5]
