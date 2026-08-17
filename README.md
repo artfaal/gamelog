@@ -15,8 +15,9 @@ cache/assets/       ← скачанные Steam-ассеты (вне git); ка
 scripts/new.mjs     ← добавить игру: кэш + заготовка записи
 scripts/build.mjs   ← сборка dist/ (лента + OG-стабы /e/<slug>/)
 scripts/hours.mjs   ← сверка часов со Steam (make hours), ничего не пишет
-scripts/video.mjs   ← проверка клипов по политике (make video), пороги в video-policy.mjs
-site/               ← styles.css и app.js, копируются в dist как есть
+scripts/video.mjs   ← проверка клипов по политике (make video)
+scripts/video-policy.mjs ← пороги политики клипов: один канон для сборки и проверки
+site/               ← styles.css, app.js и favicon.svg, копируются в dist как есть
 eslint.config.mjs   ← правила линта; прогнать отдельно — `make check`
 ```
 
@@ -161,6 +162,7 @@ make video-fix   # то же + проставит faststart без пережа�
 
 ```bash
 make check     # линт (eslint) — сам гоняется перед сборкой и деплоем
+make drafts    # собрать dist/ с черновиками, не поднимая сервер
 make serve     # локально с драфтами: http://localhost:8480
 make deploy    # прод-сборка (без драфтов) + rsync на orion
 ```
