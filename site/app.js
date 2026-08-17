@@ -5,11 +5,100 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 // — оглавление: нативный переход по якорю, диалог просто закрывается —
 const tocd = document.getElementById("tocd");
-document.getElementById("toc-btn").addEventListener("click", () => tocd.showModal());
 document.getElementById("tocd-x").addEventListener("click", () => tocd.close());
 tocd.addEventListener("click", e => {
   if (e.target === tocd) tocd.close();
   else if (e.target.closest("a[data-nav-to]")) tocd.close();
+});
+
+// — поиск в оглавлении: набор фильтрует сетку постеров, Enter ведёт к лучшему совпадению —
+const tocQ = document.getElementById("tocd-q");
+const tocCount = document.getElementById("tocd-count");
+const tocPick = document.getElementById("tocd-pick");   // кандидат под Enter — вслух, для скринридера
+const tocItems = [...tocd.querySelectorAll("#tocd-list a")]
+  .map(el => ({ el, name: el.title, slug: el.hash.slice(1) }));
+let tocHits = tocItems, tocPos = 0;
+
+const fold = s => s.toLowerCase().replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+// набрал не переключив раскладку: «фещьшс» — тоже Atomic
+const RU2EN = { й: "q", ц: "w", у: "e", к: "r", е: "t", н: "y", г: "u", ш: "i", щ: "o", з: "p",
+  ф: "a", ы: "s", в: "d", а: "f", п: "g", р: "h", о: "j", л: "k", д: "l", ж: ";", э: "'",
+  я: "z", ч: "x", с: "c", м: "v", и: "b", т: "n", ь: "m", б: ",", ю: "." };
+const relayout = s => s.replace(/[а-яё]/gi, c => RU2EN[c.toLowerCase()] ?? c);
+
+// чем раньше совпало, тем выше: начало имени → начало слова → внутри слова → инициалы → слаг
+const rank = (it, q) => {
+  const hay = fold(it.name), flat = q.replace(/ /g, "");
+  if (hay.startsWith(q)) return 4;
+  if (hay.includes(` ${q}`)) return 3;
+  if (hay.includes(q)) return 2;
+  if (hay.split(" ").map(w => w[0]).join("").startsWith(flat)) return 1.5;   // sts → Slay the Spire 2
+  if (it.slug.replace(/-/g, "").includes(flat)) return 1;                    // atomicheart → atomic-heart
+  return 0;
+};
+
+// кандидат под Enter есть только пока в поле что-то набрано: пустой фильтр — просто «все записи»
+const tocHit = () => (tocQ.value.trim() ? tocHits[tocPos] : null);
+
+const tocPaint = () => {
+  const live = new Set(tocHits);
+  const hit = tocHit();
+  tocItems.forEach(it => {
+    it.el.classList.toggle("is-off", !live.has(it));
+    it.el.classList.toggle("is-hit", it === hit);
+  });
+  tocd.querySelectorAll(".tocd__year").forEach(sec =>
+    sec.classList.toggle("is-off", !sec.querySelector("a:not(.is-off)")));
+  tocCount.textContent = !tocQ.value.trim() ? ""
+    : tocHits.length ? `${tocHits.length} из ${tocItems.length}` : "ничего не нашлось";
+  tocPick.textContent = hit ? ` — ${hit.name}` : "";
+};
+
+const tocFind = () => {
+  const raw = tocQ.value.trim();
+  const qs = [...new Set([fold(raw), fold(relayout(raw))])].filter(Boolean);
+  // сортировка стабильная — внутри одного ранга порядок остаётся хронологическим
+  tocHits = raw
+    ? tocItems.map(it => [it, Math.max(...qs.map(q => rank(it, q)))])
+      .filter(([, r]) => r > 0).sort((a, b) => b[1] - a[1]).map(([it]) => it)
+    : tocItems;
+  tocPos = 0;
+  tocPaint();
+};
+
+const tocOpen = focus => {
+  tocQ.value = "";
+  tocFind();
+  tocd.showModal();
+  if (focus) tocQ.focus();
+};
+// на телефоне поле не фокусируем — иначе диалог открывается под выехавшей клавиатурой
+document.getElementById("toc-btn").addEventListener("click", () =>
+  tocOpen(matchMedia("(hover: hover) and (pointer: fine)").matches));
+
+tocQ.addEventListener("input", tocFind);
+tocQ.addEventListener("keydown", e => {
+  // у type=search первый Esc нативно чистит поле — диалог закрылся бы только со второго
+  if (e.key === "Escape") { e.preventDefault(); tocd.close(); return; }
+  const hit = tocHit();
+  if (!hit) return;               // нечего выбирать — клавиши работают как в обычном поле
+  if (e.key === "Enter") {
+    e.preventDefault();
+    hit.el.click();
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    tocPos = (tocPos + (e.key === "ArrowDown" ? 1 : -1) + tocHits.length) % tocHits.length;
+    tocPaint();
+    tocHits[tocPos].el.scrollIntoView({ block: "nearest" });
+  }
+});
+
+// «/» — открыть оглавление сразу в поиске; поверх другого диалога и в поле не перехватываем
+addEventListener("keydown", e => {
+  if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+  if (document.querySelector("dialog[open]") || e.target.matches("input, textarea")) return;
+  e.preventDefault();
+  tocOpen(true);
 });
 
 // — спойлеры: раскрытая кнопка становится обычным текстом —

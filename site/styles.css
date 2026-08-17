@@ -415,6 +415,30 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 }
 .tocd::backdrop { background: var(--color-scrim-strong); }
 .tocd .tocd__title { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
+.tocd__find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.tocd__q {
+  flex: 1 1 12rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);   /* меньше 16px — iOS зумит страницу на фокусе */
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  appearance: none;
+}
+.tocd__q::placeholder { color: var(--color-neutral); }
+.tocd__q:focus-visible { border-color: var(--color-accent); }
+.tocd__q::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
+.tocd__count { white-space: nowrap; }
+/* фильтр: не совпало — не показываем; год без совпадений уходит целиком */
+.tocd__list a.is-off, .tocd__year.is-off { display: none; }
+/* кандидат под Enter: гало другого тона, чтобы не путалось с акцентной рамкой скролл-спая */
+.tocd__grid a.is-hit {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(94% 0.006 80 / 0.35);
+}
 .tocd__year h3 {
   font-family: var(--font-mono);
   font-weight: 400;

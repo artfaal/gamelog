@@ -358,6 +358,13 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 <dialog class="tocd" id="tocd" aria-labelledby="tocd-title">
   <button class="x" id="tocd-x" aria-label="Закрыть">${I_CLOSE}</button>
   <h2 class="tocd__title" id="tocd-title">Оглавление</h2>
+  <div class="tocd__find">
+    <input class="tocd__q" id="tocd-q" type="search" autocomplete="off" autocapitalize="none" spellcheck="false"
+           placeholder="название игры" aria-label="Поиск игры по названию"
+           aria-controls="tocd-list" aria-describedby="tocd-hint">
+    <span class="sr-only" id="tocd-hint">Enter — перейти к выбранной игре, стрелки вверх и вниз — перебрать найденное.</span>
+    <span class="tocd__count mono" role="status"><span id="tocd-count"></span><span class="sr-only" id="tocd-pick"></span></span>
+  </div>
   <nav class="tocd__list" id="tocd-list" aria-label="Список игр">${tocHtml}</nav>
 </dialog>
 <dialog class="lb" id="lb" aria-label="Медиа записи">
