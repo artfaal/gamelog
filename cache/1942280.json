@@ -1,0 +1,25 @@
+{
+  "appid": 1942280,
+  "name": "Brotato",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1942280/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1942280/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1942280/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_79be0eea0299da76bc50cef160fb669509f74e0b.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_61ad3d242282311207828c1a7d87c1c9d7b4d8bf.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_9d7d1532397e65d39a3b63e3b25bd3adf7a81b37.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_8d4467bb3278d7f50bf457337bbe76d0053ebd83.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_d4b4c0b552e655169719e35c964765bd27d05900.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_ddc4374c23a6776fb566d8c0af126d8166ce78bb.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_496fe994035e600eed101dea3e1c0482b4dac8e6.1920x1080.jpg?t=1785901135",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1942280/ss_6d2f09b839af705c732d4eaf8080a24b9939aca9.1920x1080.jpg?t=1785901135"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/257068272/microtrailer.webm",
+  "genres": [
+    "Action",
+    "Casual",
+    "Indie",
+    "RPG"
+  ],
+  "coop": true
+}
