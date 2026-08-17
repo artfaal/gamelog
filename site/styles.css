@@ -192,6 +192,32 @@ h2, h3, h4 {
   vertical-align: middle;
 }
 .chip svg, .chip .share svg { width: 13px; height: 13px; opacity: 0.75; }
+/* оценка чипом — только для узкого экрана, на широком её место занимает медаль */
+.chip--score { display: none; }
+.chip--score .of { font-size: 0.62rem; letter-spacing: 0.08em; color: var(--color-neutral); }
+/* шкала 0–10: заливка — сама оценка, насечки делят на десять */
+.chip--score .track {
+  --v: 0;
+  position: relative;
+  width: 3.2rem;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  overflow: clip;
+}
+.chip--score .track::before {
+  content: "";
+  position: absolute; inset: 0;
+  width: calc(var(--v) / 10 * 100%);
+  background: linear-gradient(90deg, oklch(78% 0.14 75 / 0.45), var(--color-accent));
+}
+.chip--score .track::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--color-scrim) calc(10% - 1px) 10%);
+  opacity: 0.55;
+}
 .chip--date svg { color: var(--color-ico-date); opacity: 1; }
 .chip--hours svg { color: var(--color-ico-hours); opacity: 1; }
 .chip--flag { color: var(--color-accent); border-color: oklch(78% 0.14 75 / 0.4); }
@@ -628,8 +654,30 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .glass .meta::before { display: none; }   /* медаль ушла в поток — место резервировать не от чего */
   /* на узком экране медаль не свисает с кромки, а встаёт в поток над метой.
      relative, а не static: сердцевина ::before держится за саму медаль, иначе растекается на панель */
-  .score { position: relative; top: auto; right: auto; margin-bottom: var(--space-md); width: 5.5rem; box-shadow: none; }
-  .score .n { font-size: var(--text-xl); }
+  /* медаль на кромку не помещается: гасим её визуально, но оставляем в потоке —
+     внутри лежит подпись для скринридера, а видимую роль берёт .chip--score */
+  .score {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    background: none;
+    box-shadow: none;
+  }
+  .score::before, .score .n { display: none; }
+  .glass.note { padding-top: var(--space-lg); }        /* место под медаль больше не нужно */
+  .glass .meta::before { display: none; }              /* и заглушка под неё тоже */
+  .chip--score {
+    display: inline-flex;
+    gap: var(--space-xs);
+    font-family: var(--font-display);
+    font-variant-numeric: lining-nums;
+    font-weight: 600;
+    font-size: var(--text-md);
+    line-height: 1;
+    color: var(--color-accent);
+  }
+  .chip--score.is-dim { font-size: var(--text-sm); color: var(--color-neutral); }
   .hero .logo { max-height: 60px; }
   .hero .logo-text { font-size: var(--text-xl); }
   .body { margin-top: -10svh; }

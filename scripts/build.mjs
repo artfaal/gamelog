@@ -217,8 +217,17 @@ const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
 
 // мета — лента чипов: каждый кусок самодостаточен, разделители не нужны.
 // О дропе говорит медаль оценки, поэтому в ленте его нет — иначе дубль.
+// на узком экране медаль не помещается на кромку — оценка едет первым чипом ленты.
+// сама медаль остаётся в разметке: там подпись для скринридера, чип её дублирует визуально
+const scoreChip = e => {
+  const dim = e.dropped || e.fm.score === TBD;
+  const body = e.dropped ? "дроп" : e.fm.score === TBD ? "—"
+    : `${ruScore(e.fm.score)}<span class="track" style="--v:${e.fm.score}"></span><span class="of">из 10</span>`;
+  return `<span class="chip chip--score${dim ? " is-dim" : ""}" aria-hidden="true">${body}</span>`;
+};
+
 const metaLine = e => {
-  const parts = [e.playing
+  const parts = [scoreChip(e), e.playing
     ? `<span class="chip chip--flag">${I_PLAY}сейчас играю</span>`
     : `<span class="chip chip--date">${I_CAL}${ruDate(e.fm.finished)}</span>`];
   // hours: tbd — часов просто нет в строке, выдумывать нечего
