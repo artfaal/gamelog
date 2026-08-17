@@ -490,6 +490,8 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 /* атрибут hidden проигрывает display из .chip — гасим кнопку и её пустой ряд */
 .chip--filter[hidden] { display: none; }
 .shelf__row:has(> .chip--reset[hidden]) { display: none; }
+/* ряд, у которого не осталось ни одного живого чипа, уходит вместе с подписью */
+.shelf__row:not(:has(.chip--filter:not([hidden]))) { display: none; }
 
 /* оценка и часы прямо на постере — иначе непонятно, почему запись прошла фильтр */
 .shelf__num {

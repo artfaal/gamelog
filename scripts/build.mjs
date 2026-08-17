@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync, statSync } from "node:fs";
 import matter from "gray-matter";
 import { marked } from "marked";
+import { LIMITS } from "./video-policy.mjs";
 
 const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
@@ -75,6 +76,8 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     fail(`clip должен быть store, none или media/…: ${fm.clip}`);
   if (fm.shots != null && !Array.isArray(fm.shots)) fail(`shots должен быть списком: ${fm.shots}`);
   if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail("нужен verdict — одна строка вердикта");
+  if (fm.genres != null && !(Array.isArray(fm.genres) && fm.genres.every(g => typeof g === "string" && g.trim())))
+    fail(`genres должен быть списком строк: ${fm.genres}`);
 
   let steam = null;
   if (fm.steam) {
@@ -137,8 +140,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       : null,
     dropped,
     playing,
-    // фасеты полки приезжают из кэша Steam; у не-Steam записей их просто нет
-    genres: steam?.genres ?? [],
+    // фасеты полки: у Steam-игр жанры из кэша, у остальных — руками во фронтматтере,
+    // иначе запись молча выпадает из любого жанрового среза
+    genres: Array.isArray(fm.genres) ? fm.genres.map(String) : steam?.genres ?? [],
     coop: steam?.coop === true,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
@@ -403,6 +407,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 <meta property="og:url" content="${SITE}/">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=IBM+Plex+Sans:wght@350;400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body id="top">
@@ -483,7 +488,15 @@ mkdirSync("dist", { recursive: true });
 writeFileSync("dist/index.html", page);
 cpSync("site/styles.css", "dist/styles.css");
 cpSync("site/app.js", "dist/app.js");
-if (existsSync("content/media")) cpSync("content/media", "dist/media", { recursive: true });
+cpSync("site/favicon.svg", "dist/favicon.svg");
+if (existsSync("content/media")) {
+  cpSync("content/media", "dist/media", { recursive: true });
+  // дешёвая часть политики клипов — вес; остальное (fps, битрейт, faststart) смотрит `make video`
+  for (const f of readdirSync("content/media").filter(f => /\.(mp4|webm)$/i.test(f))) {
+    const mb = statSync(`content/media/${f}`).size / 1024 / 1024;
+    if (mb > LIMITS.mbTotal) console.warn(`⚠ ${f}: ${mb.toFixed(0)} МБ — тяжелее ${LIMITS.mbTotal}; прогони make video`);
+  }
+}
 for (const e of entries) {
   mkdirSync(`dist/e/${e.slug}`, { recursive: true });
   writeFileSync(`dist/e/${e.slug}/index.html`, stub(e));

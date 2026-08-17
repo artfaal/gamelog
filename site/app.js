@@ -87,6 +87,10 @@ const shelfPicked = () => {
   return Object.values(rows);
 };
 
+// чип, под который не подходит ни одна запись, показывать незачем — сразу прячем;
+// считаем тем же chipFits, второй копии порогов не заводим
+shelfChips.forEach(c => { c.hidden = !shelfItems.some(it => chipFits(it, c)); });
+
 const shelfFind = () => {
   const rows = shelfPicked();
   shelfReset.hidden = !rows.length;

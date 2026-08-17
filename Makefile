@@ -1,4 +1,5 @@
-# gamelog: check — линт; build — прод-сборка; drafts — с черновиками; serve — просмотр; deploy — на orion
+# gamelog: check — линт; build — прод-сборка; drafts — черновики; serve — просмотр;
+# deploy — на orion; hours — сверка часов со Steam; video — проверка клипов
 DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
 check:
@@ -17,4 +18,15 @@ serve: drafts
 deploy: build
 	rsync -az --delete dist/ $(DEPLOY_DEST)
 
-.PHONY: check build drafts serve deploy
+# клипы: video — отчёт по политике качества, video-fix — ещё и faststart без пережатия
+video:
+	@node scripts/video.mjs
+
+video-fix:
+	@node scripts/video.mjs --fix
+
+# сверка часов со Steam: креды берём из канона game-compass, скрипт только читает
+hours:
+	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/hours.mjs
+
+.PHONY: check build drafts serve deploy hours video video-fix
