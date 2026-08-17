@@ -8,24 +8,9 @@
 // Проще через Makefile: make hours
 import { readFileSync, readdirSync } from "node:fs";
 import matter from "gray-matter";
+import { fetchOwned } from "./steam-owned.mjs";
 
-const KEY = process.env.STEAM_API_KEY;
-const ID = process.env.STEAM_ID;
-if (!KEY || !ID) {
-  console.error("нет STEAM_API_KEY/STEAM_ID — подложи ~/.skill-secrets/game-compass.env (см. make hours)");
-  process.exit(1);
-}
-
-const res = await fetch(
-  `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${KEY}&steamid=${ID}&include_appinfo=1&format=json`,
-).catch(() => null);
-if (!res?.ok) {
-  console.error(`Steam API не ответил (${res?.status ?? "сеть"}); за прокси: NODE_USE_ENV_PROXY=1 HTTPS_PROXY=… make hours`);
-  process.exit(1);
-}
-const owned = new Map(
-  ((await res.json()).response?.games ?? []).map(g => [g.appid, g.playtime_forever / 60]),
-);
+const owned = await fetchOwned("make hours");
 
 // записей на игру может быть несколько (возвращения) — сравнивать надо сумму заходов
 const byGame = new Map();
@@ -39,7 +24,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
 const TBD = "tbd";
 const rows = [];
 for (const [appid, entries] of byGame) {
-  const steam = owned.get(appid);
+  const steam = owned.get(appid)?.hours;
   const declared = entries.reduce((s, e) => s + (typeof e.hours === "number" ? e.hours : 0), 0);
   const openTbd = entries.filter(e => e.hours === TBD);
   const name = entries.map(e => e.slug).join(" + ");

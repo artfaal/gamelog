@@ -1,6 +1,6 @@
 # gamelog: check — линт; build — прод-сборка; drafts — черновики; serve — просмотр;
-# deploy — на orion; hours — сверка часов со Steam;
-# video/image — проверка клипов и кадров по политике
+# deploy — на orion; hours — сверка часов со Steam; suggest — кандидаты в дневник;
+# video/image — проверка клипов и кадров по политике; refresh — что разошлось со Steam
 DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
 check:
@@ -35,4 +35,13 @@ image:
 hours:
 	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/hours.mjs
 
-.PHONY: check build drafts serve deploy hours video video-fix image
+# кандидаты в дневник: наиграно в Steam, а записи нет. Тоже только читает
+suggest:
+	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/suggest.mjs
+
+# что разошлось со Steam по всем кэшам; ничего не пишет.
+# Точечная запись поля — прямым вызовом: node scripts/refresh.mjs <appid> --field genres
+refresh:
+	@node scripts/refresh.mjs --all
+
+.PHONY: check build drafts serve deploy hours suggest video video-fix image refresh

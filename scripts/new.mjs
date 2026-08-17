@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // new.mjs <appid> [--slug my-slug] — кэш Steam-меты + заготовка записи.
 // Машинное — только в cache/<appid>.json; md на 100% рукописный.
-import { writeFileSync, existsSync } from "node:fs";
+// Форма кэша и походы в Steam — scripts/steam-app.mjs (общий канон с refresh.mjs).
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { fetchApp, microtrailer, appCache } from "./steam-app.mjs";
 
 const args = process.argv.slice(2);
 const appid = args[0];
@@ -12,51 +14,31 @@ if (!appid || !/^\d+$/.test(appid) || (si !== -1 && !slugArg)) {
   process.exit(1);
 }
 
-const res = await fetch(
-  `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=english`,
-);
-if (!res.ok) {
-  console.error(`appdetails: HTTP ${res.status}`);
-  process.exit(1);
-}
-const data = (await res.json())[appid]?.data;
-if (!data) {
-  console.error(`appdetails: нет данных для ${appid}`);
-  process.exit(1);
-}
-
-const cdn = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}`;
-const movieid = data.movies?.[0]?.id ?? null;
-// у свежих роликов Steam легаси-файлов нет (404) — проверяем и честно пишем null
-let micro = null;
-if (movieid) {
-  const url = `https://cdn.akamai.steamstatic.com/steam/apps/${movieid}/microtrailer.webm`;
-  const head = await fetch(url, { method: "HEAD" }).catch(() => null);
-  if (head?.ok) micro = url;
-  else if (head?.status === 404) console.warn(`микротрейлера у ролика ${movieid} нет (404) — клипа не будет`);
-  else {
-    console.error(`проверка микротрейлера сорвалась (${head?.status ?? "сеть"}) — повтори позже`);
+// Кэш уже есть — это второй заход в ту же игру (atomic-heart-2024 + atomic-heart):
+// заготовку записи делаем, а кэш не трогаем. Перезапись переставила бы порядок shots,
+// и кадры в уже написанной записи молча поехали бы: она ссылается на номера.
+// Обновить поле в существующем кэше — refresh.mjs, он пишет точечно.
+const file = `cache/${appid}.json`;
+let cache;
+if (existsSync(file)) {
+  cache = JSON.parse(readFileSync(file, "utf8"));
+  console.log(`${file} уже есть — не трогаю (обновить поле: node scripts/refresh.mjs ${appid} --field genres)`);
+} else {
+  const data = await fetchApp(appid, `node scripts/new.mjs ${appid}`);
+  const { value: micro, known, movieid } = await microtrailer(data);
+  if (!known) {
+    console.error("проверка микротрейлера сорвалась (сеть) — повтори позже; за прокси: NODE_USE_ENV_PROXY=1 HTTPS_PROXY=… node scripts/new.mjs " + appid);
     process.exit(1);
   }
+  if (movieid && !micro) console.warn(`микротрейлера у ролика ${movieid} нет (404) — клипа не будет`);
+  cache = appCache(appid, data, micro);
+  writeFileSync(file, JSON.stringify(cache, null, 2) + "\n");
+  console.log(`${file} — ${cache.name}, ${cache.shots.length} скринов`);
 }
-const cache = {
-  appid: Number(appid),
-  name: data.name,
-  hero: `${cdn}/library_hero.jpg`,
-  logo: `${cdn}/logo.png`,
-  poster: `${cdn}/library_600x900.jpg`,
-  shots: (data.screenshots ?? []).slice(0, 8).map(s => s.path_full),
-  micro,
-  // фасеты полки: жанры Steam как есть, кооп — из категорий
-  genres: (data.genres ?? []).map(g => g.description),
-  coop: (data.categories ?? []).some(c => /Co-op/i.test(c.description)),
-};
-writeFileSync(`cache/${appid}.json`, JSON.stringify(cache, null, 2) + "\n");
-console.log(`cache/${appid}.json — ${cache.name}, ${cache.shots.length} скринов`);
 
 const slug =
   slugArg ??
-  data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  cache.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
   console.error(`слаг «${slug}» не годится — задай руками: --slug my-slug`);
   process.exit(1);
