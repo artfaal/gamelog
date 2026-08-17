@@ -1,0 +1,23 @@
+{
+  "appid": 3008130,
+  "name": "Dying Light: The Beast",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/3008130/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/3008130/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/3008130/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/26ac72d16d3bdec63948f769f34446feba126cb9/ss_26ac72d16d3bdec63948f769f34446feba126cb9.1920x1080.jpg?t=1777373421",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/664fb0500ab6dfeb8378e90ae45ddcfc86a9d53b/ss_664fb0500ab6dfeb8378e90ae45ddcfc86a9d53b.1920x1080.jpg?t=1777373421",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/50a84a957ec4fcd627c75692fb50123bb6d799b3/ss_50a84a957ec4fcd627c75692fb50123bb6d799b3.1920x1080.jpg?t=1777373421",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/a470b06ba2d33e31f50f075efe3fabed1756ce70/ss_a470b06ba2d33e31f50f075efe3fabed1756ce70.1920x1080.jpg?t=1777373421",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/2b048ee561f5911b6b2bb207bda7519cec0e6766/ss_2b048ee561f5911b6b2bb207bda7519cec0e6766.1920x1080.jpg?t=1777373421",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/42517dcaa43cfe5c00eed3e63ae55a151a024bc8/ss_42517dcaa43cfe5c00eed3e63ae55a151a024bc8.1920x1080.jpg?t=1777373421",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3008130/7e7088ae4652018a26b705294eb9455cda78eb1f/ss_7e7088ae4652018a26b705294eb9455cda78eb1f.1920x1080.jpg?t=1777373421"
+  ],
+  "micro": null,
+  "genres": [
+    "Action",
+    "Adventure",
+    "RPG"
+  ],
+  "coop": true
+}
