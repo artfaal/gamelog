@@ -79,8 +79,8 @@ for (const name of files) {
   console.log(`✗    ${name.padEnd(22)} ${gripes.join("; ")}`);
   if (perSec > LIMITS.mbPerSecond || v.w > LIMITS.width || v.fps > LIMITS.fps + 0.5) {
     console.log(`       ffmpeg -i ИСХОДНИК -vf "scale='min(${LIMITS.width},iw)':-2,fps=${LIMITS.fps}" \\`);
-    console.log(`         -c:v libx264 -crf 23 -preset slow -pix_fmt yuv420p -c:a aac -b:a 96k \\`);
-    console.log(`         -movflags +faststart ${file}`);
+    console.log(`         -c:v libx264 -crf 23 -maxrate ${LIMITS.maxrateMbit}M -bufsize ${LIMITS.maxrateMbit * 2}M \\`);
+    console.log(`         -preset slow -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart ${file}`);
   }
 }
 
