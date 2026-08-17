@@ -1,7 +1,7 @@
 /* Hallmark · genre: atmospheric · macrostructure: Marquee-scroll (вариант I «Свиток» из прототипа)
  * theme: custom «тёмный кинозал» · paper oklch(13% 0.008 70) · accent oklch(78% 0.14 75) amber
  * fonts: Cormorant Garamond + IBM Plex Sans + JetBrains Mono (кириллица)
- * nav: оглавление-оверлей · footer: Ft5 statement · contrast: pass (40–41) · mobile: pass (34, 49–57)
+ * nav: полка-оверлей · footer: Ft5 statement · contrast: pass (40–41) · mobile: pass (34, 49–57)
  * Hallmark · pre-emit critique: P5 H4 E4 S4 R5 V4
  */
 :root {
@@ -231,7 +231,7 @@ h2, h3, h4 {
   --v: 0;
   position: absolute;
   top: -2.4rem;
-  /* не в самом углу: в правом верхнем углу экрана висит кнопка оглавления,
+  /* не в самом углу: в правом верхнем углу экрана висит кнопка полки,
      и медаль проезжала бы под ней при прокрутке */
   right: 7rem;
   z-index: var(--z-raised);
@@ -386,8 +386,8 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   white-space: nowrap;
 }
 
-/* ———— кнопка и оверлей оглавления ———— */
-.toc-btn {
+/* ———— кнопка и оверлей полки ———— */
+.shelf-btn {
   position: fixed;
   top: var(--space-sm);
   right: max(var(--space-md), env(safe-area-inset-right));
@@ -404,8 +404,8 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   cursor: pointer;
   white-space: nowrap;
 }
-.toc-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.tocd {
+.shelf-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.shelf {
   border: 1px solid var(--color-rule);
   background: var(--color-paper-2);
   border-radius: var(--radius-md);
@@ -413,10 +413,10 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   width: min(94vw, 44rem);
   max-height: 86dvh;
 }
-.tocd::backdrop { background: var(--color-scrim-strong); }
-.tocd .tocd__title { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
-.tocd__find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
-.tocd__q {
+.shelf::backdrop { background: var(--color-scrim-strong); }
+.shelf .shelf__title { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
+.shelf__find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.shelf__q {
   flex: 1 1 12rem;
   font-family: var(--font-mono);
   font-size: var(--text-base);   /* меньше 16px — iOS зумит страницу на фокусе */
@@ -428,39 +428,39 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   padding: var(--space-sm) var(--space-md);
   appearance: none;
 }
-.tocd__q::placeholder { color: var(--color-neutral); }
-.tocd__q:focus-visible { border-color: var(--color-accent); }
-.tocd__q::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
-.tocd__count { white-space: nowrap; }
+.shelf__q::placeholder { color: var(--color-neutral); }
+.shelf__q:focus-visible { border-color: var(--color-accent); }
+.shelf__q::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
+.shelf__count { white-space: nowrap; }
 /* фильтр: не совпало — не показываем; год без совпадений уходит целиком */
-.tocd__list a.is-off, .tocd__year.is-off { display: none; }
+.shelf__list a.is-off, .shelf__year.is-off { display: none; }
 /* кандидат под Enter: гало другого тона, чтобы не путалось с акцентной рамкой скролл-спая */
-.tocd__grid a.is-hit {
+.shelf__grid a.is-hit {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px oklch(94% 0.006 80 / 0.35);
 }
-.tocd__year h3 {
+.shelf__year h3 {
   font-family: var(--font-mono);
   font-weight: 400;
   color: var(--color-neutral);
   letter-spacing: 0.02em;
   margin: var(--space-md) 0 var(--space-sm);
 }
-.tocd__grid {
+.shelf__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: var(--space-sm);
 }
-.tocd__grid a {
+.shelf__grid a {
   position: relative;
   display: block;
   border-radius: var(--radius-sm);
   border: 2px solid transparent;
 }
-.tocd__grid a img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 3px; }
-.tocd__grid a:hover { border-color: var(--color-neutral); }
-.tocd__grid a.on { border-color: var(--color-accent); }
-.tocd__tag {
+.shelf__grid a img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 3px; }
+.shelf__grid a:hover { border-color: var(--color-neutral); }
+.shelf__grid a.on { border-color: var(--color-accent); }
+.shelf__tag {
   position: absolute;
   bottom: var(--space-2xs);
   left: var(--space-2xs);
@@ -571,10 +571,10 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .site-head { padding-inline-end: var(--pad-x); }
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
   .glass.note { padding-top: var(--space-md); }
-  .toc-btn, .tocd, .reveal::after { backdrop-filter: none; }
+  .shelf-btn, .shelf, .reveal::after { backdrop-filter: none; }
   /* без блюра полупрозрачная кнопка пропускает текст, который под ней проезжает:
      на мобилке фон сплошной, а тень отделяет плашку от полотна записи */
-  .toc-btn, .top-btn {
+  .shelf-btn, .top-btn {
     background: var(--color-scrim-solid);
     box-shadow: 0 4px 18px var(--color-scrim);
   }
@@ -589,11 +589,11 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
   .lb__nav { opacity: 1; }   /* без hover стрелки видны всегда */
-  .toc-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
+  .shelf-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
   /* уезжают, пока читатель едет вниз (класс ставит app.js), возвращаются на движении вверх */
-  .toc-btn, .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
-  .fabs-away .toc-btn, .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }
-  .toc-btn .toc-btn__label, .top-btn .toc-btn__label { display: none; }
+  .shelf-btn, .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
+  .fabs-away .shelf-btn, .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }
+  .shelf-btn .fab-label, .top-btn .fab-label { display: none; }
   .top-btn { right: auto; left: max(var(--space-md), env(safe-area-inset-left)); bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
 }
 
@@ -606,5 +606,5 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   }
   html { scroll-behavior: auto; }
   /* кнопки не едут, а гаснут: пространственное движение здесь необязательное */
-  .fabs-away .toc-btn, .fabs-away .top-btn { transform: none; }
+  .fabs-away .shelf-btn, .fabs-away .top-btn { transform: none; }
 }

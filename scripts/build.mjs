@@ -126,7 +126,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     name: fm.name ?? steam?.name ?? slug,
     hero: media(fm.hero ?? steam?.hero),
     // none — у части игр логотипа и постера в Steam нет (404): имя рисуется
-    // текстом, в оглавление идёт кроп hero
+    // текстом, на полку идёт кроп hero
     logo: fm.logo === "none" ? null : fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
     poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
     shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
@@ -303,22 +303,22 @@ const entryHtml = (e, i) => {
   </article>`;
 };
 
-// оглавление: год-группы с сеткой постеров — масштабируется на десятки игр
+// полка: год-группы с сеткой постеров — масштабируется на десятки игр
 const byYear = new Map();
 entries.forEach((e, i) => {
   const y = e.playing ? "сейчас" : String(e.fm.finished).slice(0, 4);
   if (!byYear.has(y)) byYear.set(y, []);
   byYear.get(y).push([e, i]);
 });
-const tocHtml = [...byYear].map(([y, items]) => `
-  <section class="tocd__year">
+const shelfHtml = [...byYear].map(([y, items]) => `
+  <section class="shelf__year">
     <h3 class="mono">${y}</h3>
-    <div class="tocd__grid">${items.map(([e, i]) => `
+    <div class="shelf__grid">${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}"
          aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : e.playing ? " (сейчас играю)" : ""}">
         <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
-        ${e.dropped ? '<span class="tocd__tag mono">дроп</span>'
-          : e.playing ? '<span class="tocd__tag mono">играю</span>' : ""}
+        ${e.dropped ? '<span class="shelf__tag mono">дроп</span>'
+          : e.playing ? '<span class="shelf__tag mono">играю</span>' : ""}
       </a>`).join("")}</div>
   </section>`).join("");
 
@@ -348,24 +348,24 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
   <h1 class="wordmark">Хроника</h1>
   <span class="mono">${ruGames(games)} · ${hours} ч</span>
 </header>
-<button class="toc-btn" id="toc-btn" aria-haspopup="dialog" aria-label="Оглавление">☰<span class="toc-btn__label"> оглавление</span></button>
-<button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="toc-btn__label"> наверх</span></button>
+<button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
+<button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="fab-label"> наверх</span></button>
 <main>${entries.map(entryHtml).join("")}</main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>
   <span class="mono">Ассеты игр — Steam · <a href="https://artfaal.ru">artfaal</a></span>
 </footer>
-<dialog class="tocd" id="tocd" aria-labelledby="tocd-title">
-  <button class="x" id="tocd-x" aria-label="Закрыть">${I_CLOSE}</button>
-  <h2 class="tocd__title" id="tocd-title">Оглавление</h2>
-  <div class="tocd__find">
-    <input class="tocd__q" id="tocd-q" type="search" autocomplete="off" autocapitalize="none" spellcheck="false"
+<dialog class="shelf" id="shelf" aria-labelledby="shelf-title">
+  <button class="x" id="shelf-x" aria-label="Закрыть">${I_CLOSE}</button>
+  <h2 class="shelf__title" id="shelf-title">Полка</h2>
+  <div class="shelf__find">
+    <input class="shelf__q" id="shelf-q" type="search" autocomplete="off" autocapitalize="none" spellcheck="false"
            placeholder="название игры" aria-label="Поиск игры по названию"
-           aria-controls="tocd-list" aria-describedby="tocd-hint">
-    <span class="sr-only" id="tocd-hint">Enter — перейти к выбранной игре, стрелки вверх и вниз — перебрать найденное.</span>
-    <span class="tocd__count mono" role="status"><span id="tocd-count"></span><span class="sr-only" id="tocd-pick"></span></span>
+           aria-controls="shelf-list" aria-describedby="shelf-hint">
+    <span class="sr-only" id="shelf-hint">Enter — перейти к выбранной игре, стрелки вверх и вниз — перебрать найденное.</span>
+    <span class="shelf__count mono" role="status"><span id="shelf-count"></span><span class="sr-only" id="shelf-pick"></span></span>
   </div>
-  <nav class="tocd__list" id="tocd-list" aria-label="Список игр">${tocHtml}</nav>
+  <nav class="shelf__list" id="shelf-list" aria-label="Список игр">${shelfHtml}</nav>
 </dialog>
 <dialog class="lb" id="lb" aria-label="Медиа записи">
   <button class="x" id="lb-x" aria-label="Закрыть">${I_CLOSE}</button>

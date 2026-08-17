@@ -1,23 +1,23 @@
-// Хроника: оглавление, лайтбокс, спойлеры, видео-в-кадре, scroll-spy.
+// Хроника: полка, лайтбокс, спойлеры, видео-в-кадре, scroll-spy.
 // Ванильный JS, состояние — только DOM-классы.
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-// — оглавление: нативный переход по якорю, диалог просто закрывается —
-const tocd = document.getElementById("tocd");
-document.getElementById("tocd-x").addEventListener("click", () => tocd.close());
-tocd.addEventListener("click", e => {
-  if (e.target === tocd) tocd.close();
-  else if (e.target.closest("a[data-nav-to]")) tocd.close();
+// — полка: нативный переход по якорю, диалог просто закрывается —
+const shelf = document.getElementById("shelf");
+document.getElementById("shelf-x").addEventListener("click", () => shelf.close());
+shelf.addEventListener("click", e => {
+  if (e.target === shelf) shelf.close();
+  else if (e.target.closest("a[data-nav-to]")) shelf.close();
 });
 
-// — поиск в оглавлении: набор фильтрует сетку постеров, Enter ведёт к лучшему совпадению —
-const tocQ = document.getElementById("tocd-q");
-const tocCount = document.getElementById("tocd-count");
-const tocPick = document.getElementById("tocd-pick");   // кандидат под Enter — вслух, для скринридера
-const tocItems = [...tocd.querySelectorAll("#tocd-list a")]
+// — поиск на полке: набор фильтрует сетку постеров, Enter ведёт к лучшему совпадению —
+const shelfQ = document.getElementById("shelf-q");
+const shelfCount = document.getElementById("shelf-count");
+const shelfPick = document.getElementById("shelf-pick");   // кандидат под Enter — вслух, для скринридера
+const shelfItems = [...shelf.querySelectorAll("#shelf-list a")]
   .map(el => ({ el, name: el.title, slug: el.hash.slice(1) }));
-let tocHits = tocItems, tocPos = 0;
+let shelfHits = shelfItems, shelfPos = 0;
 
 const fold = s => s.toLowerCase().replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 // набрал не переключив раскладку: «фещьшс» — тоже Atomic
@@ -38,67 +38,67 @@ const rank = (it, q) => {
 };
 
 // кандидат под Enter есть только пока в поле что-то набрано: пустой фильтр — просто «все записи»
-const tocHit = () => (tocQ.value.trim() ? tocHits[tocPos] : null);
+const shelfHit = () => (shelfQ.value.trim() ? shelfHits[shelfPos] : null);
 
-const tocPaint = () => {
-  const live = new Set(tocHits);
-  const hit = tocHit();
-  tocItems.forEach(it => {
+const shelfPaint = () => {
+  const live = new Set(shelfHits);
+  const hit = shelfHit();
+  shelfItems.forEach(it => {
     it.el.classList.toggle("is-off", !live.has(it));
     it.el.classList.toggle("is-hit", it === hit);
   });
-  tocd.querySelectorAll(".tocd__year").forEach(sec =>
+  shelf.querySelectorAll(".shelf__year").forEach(sec =>
     sec.classList.toggle("is-off", !sec.querySelector("a:not(.is-off)")));
-  tocCount.textContent = !tocQ.value.trim() ? ""
-    : tocHits.length ? `${tocHits.length} из ${tocItems.length}` : "ничего не нашлось";
-  tocPick.textContent = hit ? ` — ${hit.name}` : "";
+  shelfCount.textContent = !shelfQ.value.trim() ? ""
+    : shelfHits.length ? `${shelfHits.length} из ${shelfItems.length}` : "ничего не нашлось";
+  shelfPick.textContent = hit ? ` — ${hit.name}` : "";
 };
 
-const tocFind = () => {
-  const raw = tocQ.value.trim();
+const shelfFind = () => {
+  const raw = shelfQ.value.trim();
   const qs = [...new Set([fold(raw), fold(relayout(raw))])].filter(Boolean);
   // сортировка стабильная — внутри одного ранга порядок остаётся хронологическим
-  tocHits = raw
-    ? tocItems.map(it => [it, Math.max(...qs.map(q => rank(it, q)))])
+  shelfHits = raw
+    ? shelfItems.map(it => [it, Math.max(...qs.map(q => rank(it, q)))])
       .filter(([, r]) => r > 0).sort((a, b) => b[1] - a[1]).map(([it]) => it)
-    : tocItems;
-  tocPos = 0;
-  tocPaint();
+    : shelfItems;
+  shelfPos = 0;
+  shelfPaint();
 };
 
-const tocOpen = focus => {
-  tocQ.value = "";
-  tocFind();
-  tocd.showModal();
-  if (focus) tocQ.focus();
+const shelfOpen = focus => {
+  shelfQ.value = "";
+  shelfFind();
+  shelf.showModal();
+  if (focus) shelfQ.focus();
 };
 // на телефоне поле не фокусируем — иначе диалог открывается под выехавшей клавиатурой
-document.getElementById("toc-btn").addEventListener("click", () =>
-  tocOpen(matchMedia("(hover: hover) and (pointer: fine)").matches));
+document.getElementById("shelf-btn").addEventListener("click", () =>
+  shelfOpen(matchMedia("(hover: hover) and (pointer: fine)").matches));
 
-tocQ.addEventListener("input", tocFind);
-tocQ.addEventListener("keydown", e => {
+shelfQ.addEventListener("input", shelfFind);
+shelfQ.addEventListener("keydown", e => {
   // у type=search первый Esc нативно чистит поле — диалог закрылся бы только со второго
-  if (e.key === "Escape") { e.preventDefault(); tocd.close(); return; }
-  const hit = tocHit();
+  if (e.key === "Escape") { e.preventDefault(); shelf.close(); return; }
+  const hit = shelfHit();
   if (!hit) return;               // нечего выбирать — клавиши работают как в обычном поле
   if (e.key === "Enter") {
     e.preventDefault();
     hit.el.click();
   } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
     e.preventDefault();
-    tocPos = (tocPos + (e.key === "ArrowDown" ? 1 : -1) + tocHits.length) % tocHits.length;
-    tocPaint();
-    tocHits[tocPos].el.scrollIntoView({ block: "nearest" });
+    shelfPos = (shelfPos + (e.key === "ArrowDown" ? 1 : -1) + shelfHits.length) % shelfHits.length;
+    shelfPaint();
+    shelfHits[shelfPos].el.scrollIntoView({ block: "nearest" });
   }
 });
 
-// «/» — открыть оглавление сразу в поиске; поверх другого диалога и в поле не перехватываем
+// «/» — открыть полку сразу в поиске; поверх другого диалога и в поле не перехватываем
 addEventListener("keydown", e => {
   if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
   if (document.querySelector("dialog[open]") || e.target.matches("input, textarea")) return;
   e.preventDefault();
-  tocOpen(true);
+  shelfOpen(true);
 });
 
 // — спойлеры: раскрытая кнопка становится обычным текстом —
@@ -235,7 +235,7 @@ addEventListener("scroll", () => {
   lastY = scrollY;
 }, { passive: true });
 
-// — scroll-spy: активная запись в оглавлении —
+// — scroll-spy: активная запись на полке —
 const spy = new IntersectionObserver(es => {
   es.forEach(e => {
     if (!e.isIntersecting) return;
