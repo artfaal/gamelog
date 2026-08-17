@@ -29,6 +29,12 @@ const ruGames = n => plural(n, "игра", "игры", "игр");
 const ruScore = n => String(n).replace(".", ",");
 // tbd — «пока неизвестно»: годится для finished, hours и score
 const TBD = "tbd";
+// Steam кладёт в жанры и то, что жанром не является: «Early Access» — стадия
+// релиза, а в ряду жанровых чипов на полке она стоит наравне с RPG и Roguelike.
+// Режем на потреблении, а не в new.mjs: кэши уже записаны, а повторный запуск
+// new.mjs на существующую игру запрещён — он переставит нумерацию shots.
+// Руками заданные fm.genres не трогаем: там автор пишет осознанно.
+const GENRE_STOP = new Set(["Early Access"]);
 const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
@@ -142,7 +148,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     playing,
     // фасеты полки: у Steam-игр жанры из кэша, у остальных — руками во фронтматтере,
     // иначе запись молча выпадает из любого жанрового среза
-    genres: Array.isArray(fm.genres) ? fm.genres.map(String) : steam?.genres ?? [],
+    genres: Array.isArray(fm.genres) ? fm.genres.map(String) : (steam?.genres ?? []).filter(g => !GENRE_STOP.has(g)),
     coop: steam?.coop === true,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
@@ -319,7 +325,10 @@ const entryHtml = (e, i) => {
   </article>`;
 };
 
-// полка: год-группы с сеткой постеров — масштабируется на десятки игр
+// полка: год-группы с сеткой постеров — масштабируется на десятки игр.
+// постеры lazy: полка спрятана в <dialog>, до её открытия ни один кадр не нужен,
+// а без атрибута вся сетка (десятки постеров) грузилась вместе с лентой. Сетка от
+// этого не поедет: размеры кадра заданы атрибутами, место под него занято сразу
 const byYear = new Map();
 entries.forEach((e, i) => {
   const y = e.playing ? "сейчас" : String(e.fm.finished).slice(0, 4);
@@ -342,7 +351,7 @@ const shelfHtml = [...byYear].map(([y, items]) => `
     <div class="shelf__grid">${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}" ${cardData(e)}
          aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : e.playing ? " (сейчас играю)" : ""}">
-        <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
+        <img src="${esc(e.poster ?? e.hero)}" alt="" loading="lazy" width="600" height="900">
         <span class="shelf__num mono" aria-hidden="true">
           <span class="${e.dropped || e.fm.score === TBD ? "dim" : "hi"}">${
             e.dropped ? "дроп" : e.fm.score === TBD ? "—" : ruScore(e.fm.score)}</span>
@@ -405,9 +414,12 @@ const page = `<!doctype html>
 ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}">
 <meta property="og:image:alt" content="Обложка: ${esc(entries[0].name)}">` : ""}
 <meta property="og:url" content="${SITE}/">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=IBM+Plex+Sans:wght@350;400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- шрифты живут в styles.css и раздаются со своего домена; браузер узнаёт о них
+     только разобрав таблицу, поэтому кириллический Cormorant — вордмарк и вердикт,
+     самый крупный кегль первого экрана — просится вперёд. crossorigin обязателен и
+     для своего домена: шрифт грузится в CORS-режиме, без атрибута файл поедет дважды -->
+<link rel="preload" href="fonts/cormorant-garamond-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body id="top">
@@ -489,6 +501,7 @@ writeFileSync("dist/index.html", page);
 cpSync("site/styles.css", "dist/styles.css");
 cpSync("site/app.js", "dist/app.js");
 cpSync("site/favicon.svg", "dist/favicon.svg");
+cpSync("site/fonts", "dist/fonts", { recursive: true });
 if (existsSync("content/media")) {
   cpSync("content/media", "dist/media", { recursive: true });
   // дешёвая часть политики клипов — вес; остальное (fps, битрейт, faststart) смотрит `make video`
@@ -505,4 +518,23 @@ for (const [rel, file] of toCopy) {
   mkdirSync(`dist/${rel.slice(0, rel.lastIndexOf("/"))}`, { recursive: true });
   cpSync(file, `dist/${rel}`);
 }
+
+// sitemap из одного адреса: сайт — одна лента, записи в ней якоря. Стабы /e/<slug>/
+// сюда не идут: их canonical смотрит в /#slug, живут они ради OG-карточки в телеграме,
+// и робот их всё равно отбросит — класть их в sitemap значит врать ему.
+// lastmod — свежайшая дата финала; у «сейчас играю» даты нет, в расчёт не берём.
+const lastmod = entries.map(e => String(e.fm.finished)).filter(d => d !== TBD).sort().at(-1);
+writeFileSync("dist/sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${SITE}/</loc>${lastmod ? `
+    <lastmod>${lastmod}</lastmod>` : ""}
+  </url>
+</urlset>
+`);
+writeFileSync("dist/robots.txt", `User-agent: *
+Allow: /
+
+Sitemap: ${SITE}/sitemap.xml
+`);
 console.log(`dist: ${entries.length} записей (${ruGames(games)}, ${hours} ч)${DRAFTS ? " + драфты" : ""}`);
