@@ -1,5 +1,6 @@
 # gamelog: check — линт; build — прод-сборка; drafts — черновики; serve — просмотр;
-# deploy — на orion; hours — сверка часов со Steam; video — проверка клипов
+# deploy — на orion; hours — сверка часов со Steam;
+# video/image — проверка клипов и кадров по политике
 DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
 check:
@@ -25,8 +26,13 @@ video:
 video-fix:
 	@node scripts/video.mjs --fix
 
+# кадры: та же идея, что у клипов — отчёт с готовой командой пережатия.
+# --fix нет: у картинок правки без потери качества не выходит, см. шапку image.mjs
+image:
+	@node scripts/image.mjs
+
 # сверка часов со Steam: креды берём из канона game-compass, скрипт только читает
 hours:
 	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/hours.mjs
 
-.PHONY: check build drafts serve deploy hours video video-fix
+.PHONY: check build drafts serve deploy hours video video-fix image
