@@ -47,6 +47,9 @@ const cache = {
   poster: `${cdn}/library_600x900.jpg`,
   shots: (data.screenshots ?? []).slice(0, 8).map(s => s.path_full),
   micro,
+  // фасеты полки: жанры Steam как есть, кооп — из категорий
+  genres: (data.genres ?? []).map(g => g.description),
+  coop: (data.categories ?? []).some(c => /Co-op/i.test(c.description)),
 };
 writeFileSync(`cache/${appid}.json`, JSON.stringify(cache, null, 2) + "\n");
 console.log(`cache/${appid}.json — ${cache.name}, ${cache.shots.length} скринов`);

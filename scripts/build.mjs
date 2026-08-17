@@ -137,6 +137,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       : null,
     dropped,
     playing,
+    // фасеты полки приезжают из кэша Steam; у не-Steam записей их просто нет
+    genres: steam?.genres ?? [],
+    coop: steam?.coop === true,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
     moments,
@@ -310,17 +313,67 @@ entries.forEach((e, i) => {
   if (!byYear.has(y)) byYear.set(y, []);
   byYear.get(y).push([e, i]);
 });
+// карточка несёт свои данные атрибутами — фильтр на клиенте считает по ним, без второго индекса
+const cardData = e => [
+  `data-status="${e.dropped ? "drop" : e.playing ? "play" : "done"}"`,
+  typeof e.fm.score === "number" ? `data-score="${e.fm.score}"` : "",
+  typeof e.fm.hours === "number" ? `data-hours="${e.fm.hours}"` : "",
+  e.genres.length ? `data-genres="${esc(e.genres.join("|"))}"` : "",
+  e.coop ? 'data-coop=""' : "",
+  e.moments.length ? `data-moments="${e.moments.length}"` : "",
+].filter(Boolean).join(" ");
+
 const shelfHtml = [...byYear].map(([y, items]) => `
   <section class="shelf__year">
     <h3 class="mono">${y}</h3>
     <div class="shelf__grid">${items.map(([e, i]) => `
-      <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}"
+      <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}" ${cardData(e)}
          aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : e.playing ? " (сейчас играю)" : ""}">
         <img src="${esc(e.poster ?? e.hero)}" alt="" width="600" height="900">
-        ${e.dropped ? '<span class="shelf__tag mono">дроп</span>'
-          : e.playing ? '<span class="shelf__tag mono">играю</span>' : ""}
+        <span class="shelf__num mono" aria-hidden="true">
+          <span class="${e.dropped || e.fm.score === TBD ? "dim" : "hi"}">${
+            e.dropped ? "дроп" : e.fm.score === TBD ? "—" : ruScore(e.fm.score)}</span>
+          <span>${typeof e.fm.hours === "number" ? `${e.fm.hours} ч` : ""}</span>
+        </span>
+        ${e.playing ? '<span class="shelf__tag mono">играю</span>' : ""}
       </a>`).join("")}</div>
   </section>`).join("");
+
+// чипы фильтра: пороги живут здесь и уезжают в разметку атрибутами —
+// app.js их только применяет и второй копии порогов не держит
+const CHIPS = [
+  ["оценка", [
+    { k: "score", min: 9, lab: "9+" },
+    { k: "score", min: 8, lab: "8+" },
+    { k: "score", min: 7, lab: "7+" },
+  ]],
+  ["статус", [
+    { k: "status", v: "done", lab: "пройдено" },
+    { k: "status", v: "drop", lab: "дроп" },
+    { k: "status", v: "play", lab: "играю" },
+  ]],
+  ["часы", [
+    { k: "hours", max: 10, lab: "до 10 ч" },
+    { k: "hours", min: 10, max: 40, lab: "10–40 ч" },
+    { k: "hours", min: 40, lab: "40+ ч" },
+  ]],
+  ["ещё", [
+    { k: "flag", v: "coop", lab: "кооп" },
+    { k: "flag", v: "moments", lab: "с моментами" },
+  ]],
+];
+const chipHtml = c => `<button type="button" class="chip chip--filter mono" data-k="${esc(c.k)}"${
+  c.v !== undefined ? ` data-v="${esc(c.v)}"` : ""}${
+  c.min !== undefined ? ` data-min="${c.min}"` : ""}${
+  c.max !== undefined ? ` data-max="${c.max}"` : ""} aria-pressed="false">${esc(c.lab)}</button>`;
+// role=group с подписью: иначе скринридер читает «9+, кнопка» без названия оси
+const chipRow = (label, chips) => chips.length ? `
+  <div class="shelf__row" role="group" aria-label="${esc(label)}"><span class="shelf__rowlab mono" aria-hidden="true">${label}</span>${chips.map(chipHtml).join("")}</div>` : "";
+// жанры не выдумываем: в ряд попадают только те, что реально есть в записях
+const genres = [...new Set(entries.flatMap(e => e.genres))].sort();
+const filtersHtml =
+  CHIPS.map(([label, items]) => chipRow(label, items)).join("") +
+  chipRow("жанр", genres.map(g => ({ k: "genre", v: g, lab: g })));
 
 // счётчик считает всё подряд: дропы и «сейчас играю» тоже игры, часы — сумма всех заходов
 const games = new Set(entries.map(gameKey)).size;
@@ -355,7 +408,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
   <p>Игры заканчиваются. Воспоминания — нет.</p>
   <span class="mono">Ассеты игр — Steam · <a href="https://artfaal.ru">artfaal</a></span>
 </footer>
-<dialog class="shelf" id="shelf" aria-labelledby="shelf-title">
+<dialog class="shelf" id="shelf" tabindex="-1" aria-labelledby="shelf-title">
   <button class="x" id="shelf-x" aria-label="Закрыть">${I_CLOSE}</button>
   <h2 class="shelf__title" id="shelf-title">Полка</h2>
   <div class="shelf__find">
@@ -364,6 +417,9 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
            aria-controls="shelf-list" aria-describedby="shelf-hint">
     <span class="sr-only" id="shelf-hint">Enter — перейти к выбранной игре, стрелки вверх и вниз — перебрать найденное.</span>
     <span class="shelf__count mono" role="status"><span id="shelf-count"></span><span class="sr-only" id="shelf-pick"></span></span>
+  </div>
+  <div class="shelf__filters">${filtersHtml}
+    <div class="shelf__row"><button type="button" class="chip chip--filter chip--reset mono" id="shelf-reset" hidden>сбросить</button></div>
   </div>
   <nav class="shelf__list" id="shelf-list" aria-label="Список игр">${shelfHtml}</nav>
 </dialog>

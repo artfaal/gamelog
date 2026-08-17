@@ -14,5 +14,9 @@
     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/632470/ss_81ea48324fbac48a00e482781be56cd57d796620.1920x1080.jpg?t=1780913406",
     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/632470/ss_0813f92720c59a5d21ed2d3291b8156bb4cb0fc8.1920x1080.jpg?t=1780913406"
   ],
-  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/256827872/microtrailer.webm"
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/256827872/microtrailer.webm",
+  "genres": [
+    "RPG"
+  ],
+  "coop": false
 }

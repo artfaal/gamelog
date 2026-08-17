@@ -406,6 +406,9 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 }
 .shelf-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .shelf {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* скроллится только сетка — поиск и чипы не уезжают */
   border: 1px solid var(--color-rule);
   background: var(--color-paper-2);
   border-radius: var(--radius-md);
@@ -413,6 +416,14 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   width: min(94vw, 44rem);
   max-height: 86dvh;
 }
+/* сетка забирает остаток высоты и скроллится сама; шапка окна не ужимается */
+.shelf > :not(.shelf__list) { flex: none; }
+/* basis auto, а не 0: иначе окно не дорастает до max-height и сетке нечего забирать */
+.shelf__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+/* линия отделяет прокручиваемую сетку от шапки — иначе обрез читается как сбой вёрстки */
+.shelf__list { border-top: 1px solid var(--color-rule); padding-top: var(--space-sm); }
+/* сам диалог фокусируем программно (чтобы не мигал крестик) — кольцо ему не нужно */
+.shelf:focus { outline: none; }
 .shelf::backdrop { background: var(--color-scrim-strong); }
 .shelf .shelf__title { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
 .shelf__find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
@@ -432,6 +443,42 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .shelf__q:focus-visible { border-color: var(--color-accent); }
 .shelf__q::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
 .shelf__count { white-space: nowrap; }
+/* ———— чипы фильтра: ряд на ось, внутри ряда — ИЛИ ———— */
+.shelf__filters { display: grid; gap: var(--space-2xs); margin-bottom: var(--space-md); }
+.shelf__row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs); }
+.shelf__rowlab { width: 4rem; flex: none; color: var(--color-neutral); }
+.chip--filter {
+  font-size: var(--text-xs);
+  min-height: 1.9rem;
+  margin: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip--filter:hover { border-color: var(--color-neutral); color: var(--color-ink); }
+.chip--filter[aria-pressed="true"] {
+  color: var(--color-paper);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.chip--reset { border-style: dashed; background: none; }
+/* атрибут hidden проигрывает display из .chip — гасим кнопку и её пустой ряд */
+.chip--filter[hidden] { display: none; }
+.shelf__row:has(> .chip--reset[hidden]) { display: none; }
+
+/* оценка и часы прямо на постере — иначе непонятно, почему запись прошла фильтр */
+.shelf__num {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2xs);
+  padding: 2px 4px;
+  color: var(--color-muted);
+  background: var(--color-scrim-strong);
+  border-radius: 0 0 3px 3px;
+}
+.shelf__num .hi { color: var(--color-accent); font-weight: 500; }
+.shelf__num .dim { color: var(--color-neutral); }
 /* фильтр: не совпало — не показываем; год без совпадений уходит целиком */
 .shelf__list a.is-off, .shelf__year.is-off { display: none; }
 /* кандидат под Enter: гало другого тона, чтобы не путалось с акцентной рамкой скролл-спая */
@@ -462,7 +509,7 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .shelf__grid a.on { border-color: var(--color-accent); }
 .shelf__tag {
   position: absolute;
-  bottom: var(--space-2xs);
+  top: var(--space-2xs);        /* низ карточки занят оценкой и часами */
   left: var(--space-2xs);
   background: var(--color-scrim-strong);
   border-radius: 3px;
@@ -590,6 +637,15 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .moment.is-spoiler figcaption { grid-area: auto; }
   .lb__nav { opacity: 1; }   /* без hover стрелки видны всегда */
   .shelf-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
+  /* фильтр не должен съедать экран целиком: воздуха меньше, чипы — крупнее пальцу */
+  .shelf { padding: var(--space-md); max-height: 92dvh; }
+  .shelf .shelf__title { margin-bottom: var(--space-xs); }
+  .shelf__find { margin-bottom: var(--space-xs); }
+  .shelf__filters { margin-bottom: var(--space-xs); }
+  .chip--filter { min-height: 2.25rem; padding-inline: var(--space-sm); }
+  /* на узком экране все чипы в высоту не влезают: даём им свой предел,
+     иначе сетке постеров не остаётся ни строки */
+  .shelf__filters { max-height: 34dvh; overflow-y: auto; overscroll-behavior: contain; margin-bottom: 0; }
   /* уезжают, пока читатель едет вниз (класс ставит app.js), возвращаются на движении вверх */
   .shelf-btn, .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
   .fabs-away .shelf-btn, .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }

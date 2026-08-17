@@ -14,5 +14,11 @@
     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/668580/ss_0e4b3349f2124cdba1df885ac3cdabfba87b22fb.1920x1080.jpg?t=1786632138",
     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/668580/ss_5b70e08d5afa8f3df574852f77fa2347eefd2a57.1920x1080.jpg?t=1786632138"
   ],
-  "micro": null
+  "micro": null,
+  "genres": [
+    "Action",
+    "Adventure",
+    "RPG"
+  ],
+  "coop": false
 }

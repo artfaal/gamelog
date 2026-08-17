@@ -14,5 +14,12 @@
     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1239080/ss_fa2c86c7be1c99f8bdf1f0a445627521d86d3dc9.1920x1080.jpg?t=1757581897",
     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1239080/ss_cd07cde468ec5a21411b01b715a5344122c903d5.1920x1080.jpg?t=1757581897"
   ],
-  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/257096187/microtrailer.webm"
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/257096187/microtrailer.webm",
+  "genres": [
+    "Action",
+    "Indie",
+    "Simulation",
+    "Strategy"
+  ],
+  "coop": true
 }

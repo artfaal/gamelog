@@ -15,8 +15,16 @@ shelf.addEventListener("click", e => {
 const shelfQ = document.getElementById("shelf-q");
 const shelfCount = document.getElementById("shelf-count");
 const shelfPick = document.getElementById("shelf-pick");   // кандидат под Enter — вслух, для скринридера
-const shelfItems = [...shelf.querySelectorAll("#shelf-list a")]
-  .map(el => ({ el, name: el.title, slug: el.hash.slice(1) }));
+const shelfItems = [...shelf.querySelectorAll("#shelf-list a")].map(el => ({
+  el,
+  name: el.title,
+  slug: el.hash.slice(1),
+  status: el.dataset.status,
+  score: el.dataset.score ? Number(el.dataset.score) : null,
+  hours: el.dataset.hours ? Number(el.dataset.hours) : null,
+  genres: el.dataset.genres ? el.dataset.genres.split("|") : [],
+  flags: [el.dataset.coop !== undefined ? "coop" : "", el.dataset.moments ? "moments" : ""].filter(Boolean),
+}));
 let shelfHits = shelfItems, shelfPos = 0;
 
 const fold = s => s.toLowerCase().replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -49,32 +57,74 @@ const shelfPaint = () => {
   });
   shelf.querySelectorAll(".shelf__year").forEach(sec =>
     sec.classList.toggle("is-off", !sec.querySelector("a:not(.is-off)")));
-  shelfCount.textContent = !shelfQ.value.trim() ? ""
+  shelfCount.textContent = !shelfQ.value.trim() && !shelfPicked().length ? ""
     : shelfHits.length ? `${shelfHits.length} из ${shelfItems.length}` : "ничего не нашлось";
   shelfPick.textContent = hit ? ` — ${hit.name}` : "";
 };
 
+// — фильтр: чипы сужают набор, дальше по нему работает поиск —
+// пороги приезжают из сборки атрибутами; здесь только их применение
+const shelfChips = [...shelf.querySelectorAll(".chip--filter[data-k]")];
+const shelfReset = document.getElementById("shelf-reset");
+const chipFits = (it, c) => {
+  const d = c.dataset;
+  if (d.k === "score") return it.score != null && it.score >= Number(d.min);
+  if (d.k === "hours") return it.hours != null
+    && (d.min === undefined || it.hours >= Number(d.min))
+    && (d.max === undefined || it.hours < Number(d.max));
+  if (d.k === "status") return it.status === d.v;
+  if (d.k === "flag") return it.flags.includes(d.v);
+  if (d.k === "genre") return it.genres.includes(d.v);
+  return true;
+};
+// внутри ряда чипы складываются по ИЛИ, ряды между собой — по И
+const shelfPicked = () => {
+  const rows = {};
+  for (const c of shelfChips) {
+    if (c.getAttribute("aria-pressed") !== "true") continue;
+    (rows[c.dataset.k] ??= []).push(c);
+  }
+  return Object.values(rows);
+};
+
 const shelfFind = () => {
+  const rows = shelfPicked();
+  shelfReset.hidden = !rows.length;
+  const kept = rows.length
+    ? shelfItems.filter(it => rows.every(cs => cs.some(c => chipFits(it, c))))
+    : shelfItems;
   const raw = shelfQ.value.trim();
   const qs = [...new Set([fold(raw), fold(relayout(raw))])].filter(Boolean);
   // сортировка стабильная — внутри одного ранга порядок остаётся хронологическим
   shelfHits = raw
-    ? shelfItems.map(it => [it, Math.max(...qs.map(q => rank(it, q)))])
+    ? kept.map(it => [it, Math.max(...qs.map(q => rank(it, q)))])
       .filter(([, r]) => r > 0).sort((a, b) => b[1] - a[1]).map(([it]) => it)
-    : shelfItems;
+    : kept;
   shelfPos = 0;
   shelfPaint();
 };
 
+// набранное сбрасывается на каждом открытии, выбранные чипы — нет:
+// запрос разовый, а фильтр — режим просмотра, в котором читатель остаётся
 const shelfOpen = focus => {
   shelfQ.value = "";
   shelfFind();
   shelf.showModal();
+  // без фокуса поля фокус уехал бы на крестик и мигал кольцом — уводим в сам диалог
   if (focus) shelfQ.focus();
+  else shelf.focus();
 };
 // на телефоне поле не фокусируем — иначе диалог открывается под выехавшей клавиатурой
 document.getElementById("shelf-btn").addEventListener("click", () =>
   shelfOpen(matchMedia("(hover: hover) and (pointer: fine)").matches));
+
+shelf.querySelector(".shelf__filters").addEventListener("click", e => {
+  const c = e.target.closest(".chip--filter");
+  if (!c) return;
+  if (c === shelfReset) shelfChips.forEach(x => x.setAttribute("aria-pressed", "false"));
+  else c.setAttribute("aria-pressed", String(c.getAttribute("aria-pressed") !== "true"));
+  shelfFind();
+});
 
 shelfQ.addEventListener("input", shelfFind);
 shelfQ.addEventListener("keydown", e => {
