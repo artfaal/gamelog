@@ -140,6 +140,11 @@ body {
 img, video { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
 dialog { margin: auto; }
+/* .shelf задаёт себе display: flex ради колоночной раскладки, и этим перебивает
+   правило браузера «закрытый dialog не показывать»: авторский стиль сильнее UA
+   независимо от специфичности. Итог — закрытая полка висела блоком после футера.
+   Правило на всех диалогов сразу: специфичность 0,1,1 берёт верх над .shelf */
+dialog:not([open]) { display: none; }
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; transition: none; }
 ::selection { background: var(--color-accent); color: var(--color-scrim); }
 h2, h3, h4 {
