@@ -1,0 +1,26 @@
+{
+  "appid": 1458140,
+  "name": "Pacific Drive",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1458140/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1458140/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1458140/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_a753a13813556eb20e02763e82877485dac848ab.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_7dfb1b9087a859b49debadb941269f971b212277.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_930c6e45bb3ea4510af967f94650007ea9b73383.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_d3a7abac1b8cc4a09aff0ff023998c6aa0404c3c.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_95e6fcee0a43efdc430e01c9660b3ab2b61658bc.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_1b7b6b59d66bc85538302850b873eb2797f33205.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_9ed35d0bcd568534f0a0223d7eef186dff0e2b08.1920x1080.jpg?t=1763777212",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1458140/ss_db3b840ec549ee2ca8ab9e70f6096b6eb7a11155.1920x1080.jpg?t=1763777212"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/256929444/microtrailer.webm",
+  "genres": [
+    "Action",
+    "Adventure",
+    "Indie",
+    "Racing",
+    "Simulation"
+  ],
+  "coop": false
+}
