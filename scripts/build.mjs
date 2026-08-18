@@ -35,6 +35,9 @@ const TBD = "tbd";
 // new.mjs на существующую игру запрещён — он переставит нумерацию shots.
 // Руками заданные fm.genres не трогаем: там автор пишет осознанно.
 const GENRE_STOP = new Set(["Early Access"]);
+// узкий экран: обои переключаются с широкого hero на вертикальный постер.
+// Значение дублируется в @media site/styles.css — менять обязательно парой.
+const NARROW = "(max-width: 48rem)";
 const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
@@ -81,6 +84,8 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
     fail(`clip должен быть store, none или media/…: ${fm.clip}`);
   if (fm.shots != null && !Array.isArray(fm.shots)) fail(`shots должен быть списком: ${fm.shots}`);
+  if (fm.focus != null && !(Number.isFinite(fm.focus) && fm.focus >= 0 && fm.focus <= 100))
+    fail(`focus — число 0–100, процент по горизонтали: ${fm.focus}`);
   if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail("нужен verdict — одна строка вердикта");
   if (fm.genres != null && !(Array.isArray(fm.genres) && fm.genres.every(g => typeof g === "string" && g.trim())))
     fail(`genres должен быть списком строк: ${fm.genres}`);
@@ -138,6 +143,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     // текстом, на полку идёт кроп hero
     logo: fm.logo === "none" ? null : fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
     poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
+    // смысловой центр обоев по горизонтали: hero — широкий баннер, на узком экране
+    // от него видно ~пятую часть ширины, и центр кадра сплошь и рядом не там
+    focus: fm.focus ?? null,
     shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
     // у дропа медиа по умолчанию нет — но заданные руками shots и clip показываются
     clip: fm.clip === "none" ? null
@@ -264,6 +272,15 @@ const metaLine = e => {
 };
 
 // закрытый спойлер прячется одним inert: он же убирает содержимое из чтения скринридером
+// переменные обоев: --focus — смысловой центр кропа, --poster — тот же файл постера
+// для размытой подложки на узком экране (второй загрузки не будет, url совпадает с <source>)
+const heroVars = e => {
+  const v = [
+    e.focus != null ? `--focus:${e.focus}%` : "",
+    e.poster ? `--poster:url('${esc(e.poster).replace(/'/g, "%27")}')` : "",
+  ].filter(Boolean);
+  return v.length ? ` style="${v.join(";")}"` : "";
+};
 const videoHtml = (src, label, { poster = "", preload = "none", hidden = false } = {}) =>
   `<video class="clip" src="${esc(src)}" muted loop playsinline controls preload="${preload}"${poster ? ` poster="${esc(poster)}"` : ""}
       aria-label="Видео: ${esc(label)}"${hidden ? " inert" : ""}></video>`;
@@ -308,8 +325,11 @@ const entryHtml = (e, i) => {
     </div>`;
   return `
   <article class="stage" id="${esc(e.slug)}" data-nav="${i}">
-    <div class="hero">
-      <img class="bg" src="${esc(e.hero)}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+    <div class="hero${e.poster ? " hero--poster" : ""}"${heroVars(e)}>
+      <picture>
+        ${e.poster ? `<source media="${NARROW}" srcset="${esc(e.poster)}" width="600" height="900">` : ""}
+        <img class="bg" src="${esc(e.hero)}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+      </picture>
       ${logo}
     </div>
     <div class="body">

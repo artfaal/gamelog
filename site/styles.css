@@ -197,7 +197,9 @@ h2, h3, h4 {
 
 /* ———— запись: sticky-обои + панели по центру ———— */
 .hero { position: sticky; top: 0; height: 100svh; overflow: clip; }
-.hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+/* --focus (задаёт focus: во фронтматтере) — смысловой центр обоев по горизонтали:
+   кроп широкого hero под экран съедает бока, и середина файла редко совпадает с сюжетом */
+.hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50%) center; }
 .hero::after {
   content: "";
   position: absolute; inset: 0;
@@ -710,6 +712,8 @@ dialog .x:hover { color: var(--color-ink); background: var(--color-scrim-strong)
 dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* ———— мобилка ———— */
+/* узкий экран. Брейкпоинт дублируется в NARROW в scripts/build.mjs (<source media>) —
+   менять обязательно парой, иначе постер и мобильная вёрстка включатся на разной ширине */
 @media (max-width: 48rem) {
   .site-head { padding-inline-end: var(--pad-x); }
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
@@ -750,7 +754,56 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .chip--score.is-dim { font-size: var(--text-sm); color: var(--color-neutral); }
   .hero .logo { max-height: 60px; }
   .hero .logo-text { font-size: var(--text-xl); }
+  /* на узком экране обои — вертикальный постер, имя игры в него уже вшито: свой логотип поверх был бы вторым названием */
+  .hero--poster .logo, .hero--poster .logo-text { display: none; }
+  /* постер 2:3 шире экрана телефона: кроп по ширине резал бы вшитый вордмарк с обоих боков.
+     Показываем его целиком, прижатым к верху, а полосу под ним растворяем — тремя слоями
+     ОДНОЙ картинки, чтобы низ кадра терял резкость сам, а не упирался в чужое размытое пятно:
+       ::before        — нижняя кромка постера, растянутая вниз до низа экрана
+       picture::after  — копия постера в той же геометрии под блюром, открытая маской снизу
+     --poster-h: высота постера при ширине экрана (2:3), --bleed: поля, чтобы blur
+     не втягивал прозрачность с кромок кадра. Экран шире 2:3 — 150vw уходит за низ,
+     обе добавки схлопываются сами */
+  .hero--poster { --poster-h: 150vw; --bleed: 24px; }
+  .hero--poster img.bg { object-fit: contain; object-position: center top; }
+  .hero--poster::before {
+    content: "";
+    position: absolute;
+    left: calc(-1 * var(--bleed));
+    right: calc(-1 * var(--bleed));
+    top: var(--poster-h);
+    bottom: calc(-1 * var(--bleed));
+    background: var(--poster) center bottom / 100% 4000%;
+    filter: blur(10px);
+  }
+  .hero--poster picture::after {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--bleed));
+    background: var(--poster) center var(--bleed) / calc(100% - 2 * var(--bleed)) auto no-repeat;
+    filter: blur(14px);
+    /* две зоны: верхняя кромка постера и его низ. Верх — чтобы следующая запись въезжала
+       из размытия, а не резаным краем в размытый хвост предыдущей */
+    mask-image: linear-gradient(to bottom,
+      #000 var(--bleed),
+      transparent calc(var(--bleed) + 44px),
+      transparent calc(var(--bleed) + var(--poster-h) - 62px),
+      #000 calc(var(--bleed) + var(--poster-h) + 56px));
+  }
+  /* стык записей: хвост уезжающей дотаивает в цвет страницы, верх приезжающей из него всплывает —
+     на шве встречаются два фона, а не резаная кромка. Всем обоям, а не только постерным:
+     у записи без постера кромка кадра такая же резкая */
+  .hero::after {
+    background:
+      linear-gradient(to bottom, var(--color-paper) 20px, transparent 130px),
+      linear-gradient(to top, var(--color-paper) 40px, transparent 320px),
+      linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
+  }
   .body { margin-top: -10svh; }
+  /* постер прижат к верху, вся размытая полоса собрана внизу — панель начинается
+     ровно на ней: низ постера при ширине экрана = 150vw (2:3). min() возвращает
+     обычный нахлёст там, где экран шире 2:3 и постер упёрся не в ширину, а в высоту */
+  .hero--poster + .body { margin-top: min(-10svh, calc(150vw - 100svh)); }
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
   .lb__nav { opacity: 1; }   /* без hover стрелки видны всегда */

@@ -53,7 +53,7 @@ export function appCache(appid, data, micro) {
     name: data.name,
     hero: `${cdn}/library_hero.jpg`,
     logo: `${cdn}/logo.png`,
-    poster: `${cdn}/library_600x900.jpg`,
+    poster: `${cdn}/library_600x900_2x.jpg`,
     shots: (data.screenshots ?? []).slice(0, 8).map(s => s.path_full),
     micro,
     // фасеты полки: жанры Steam как есть, кооп — из категорий
