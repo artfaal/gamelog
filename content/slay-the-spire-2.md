@@ -3,7 +3,7 @@ steam: 2868840
 finished: 2026-07-26
 hours: 56
 score: 7.5
-verdict: Тот самый «ну ещё один забег» — только теперь вдвоём.
+verdict: Кооп, который не должен был работать. Работает.
 shots: [1, 2]
 clip: media/sts2-trailer.mp4
 ---

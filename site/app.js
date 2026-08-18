@@ -14,7 +14,9 @@ shelf.addEventListener("click", e => {
 // — поиск на полке: набор фильтрует сетку постеров, Enter ведёт к лучшему совпадению —
 const shelfQ = document.getElementById("shelf-q");
 const shelfCount = document.getElementById("shelf-count");
-const shelfPick = document.getElementById("shelf-pick");   // кандидат под Enter — вслух, для скринридера
+const shelfPick = document.getElementById("shelf-pick");
+const sayBox = document.getElementById("say");                // короткие сообщения скрипта вслух
+const say = msg => { sayBox.textContent = ""; setTimeout(() => sayBox.textContent = msg, 50); };   // кандидат под Enter — вслух, для скринридера
 const shelfItems = [...shelf.querySelectorAll("#shelf-list a")].map(el => ({
   el,
   name: el.title,
@@ -59,7 +61,7 @@ const shelfPaint = () => {
     sec.classList.toggle("is-off", !sec.querySelector("a:not(.is-off)")));
   shelfCount.textContent = !shelfQ.value.trim() && !shelfPicked().length ? ""
     : shelfHits.length ? `${shelfHits.length} из ${shelfItems.length}` : "ничего не нашлось";
-  shelfPick.textContent = hit ? ` — ${hit.name}` : "";
+  shelfPick.textContent = hit ? `. Enter откроет ${hit.name}` : "";
 };
 
 // — фильтр: чипы сужают набор, дальше по нему работает поиск —
@@ -189,11 +191,8 @@ document.addEventListener("click", async e => {
   if (navigator.share) { navigator.share({ title: btn.dataset.name, url }).catch(() => {}); return; }
   try { await navigator.clipboard.writeText(url); } catch { return; }
   btn.classList.add("ok");
-  btn.setAttribute("aria-label", "Ссылка скопирована");
-  setTimeout(() => {
-    btn.classList.remove("ok");
-    btn.setAttribute("aria-label", "Поделиться ссылкой на запись");
-  }, 1500);
+  say("Ссылка скопирована");   // имя кнопки остаётся на месте: подмена на 1,5 с прячет действие
+  setTimeout(() => btn.classList.remove("ok"), 1500);
 });
 
 // — лайтбокс: все медиа записи одной лентой, листается стрелками и кликом по краям —
@@ -219,7 +218,7 @@ const lbShow = () => {
   lbStage.replaceChildren(node);
   if (node.tagName === "VIDEO" && !reduceMotion.matches) node.play().catch(() => {});
   lbCap.textContent = cap;
-  lbCount.textContent = reel.length > 1 ? `${pos + 1} / ${reel.length}` : "";
+  lbCount.textContent = reel.length > 1 ? `${pos + 1} из ${reel.length}` : "";
   lbPrev.hidden = lbNext.hidden = reel.length < 2;
 };
 const lbGo = d => { pos = (pos + d + reel.length) % reel.length; lbShow(); };

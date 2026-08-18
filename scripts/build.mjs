@@ -17,9 +17,11 @@ const ruDate = iso => {
   const [y, m, d] = String(iso).split("-").map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
 };
+// разряды режем узким неразрывным пробелом: часы растут ~500 в год, «1472 ч» читается хуже
+const ruNum = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
 const plural = (n, one, few, many) => {
   const m10 = n % 10, m100 = n % 100;
-  return `${n} ${(m100 >= 11 && m100 <= 14) ? many : m10 === 1 ? one : (m10 >= 2 && m10 <= 4) ? few : many}`;
+  return `${ruNum(n)} ${(m100 >= 11 && m100 <= 14) ? many : m10 === 1 ? one : (m10 >= 2 && m10 <= 4) ? few : many}`;
 };
 const ruHours = n => plural(n, "час", "часа", "часов");
 const ruGames = n => plural(n, "игра", "игры", "игр");
@@ -262,8 +264,8 @@ const metaLine = e => {
   }
   // есть appid — даём читателю прямой путь на страницу игры в магазине
   if (e.fm.steam) parts.push(`<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
-        aria-label="Открыть ${esc(e.name)} в Steam" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`);
-  parts.push(`<span class="chip chip--btn"><button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой на запись" title="Поделиться">
+        aria-label="Открыть ${esc(e.name)} в Steam — новая вкладка" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`);
+  parts.push(`<span class="chip chip--btn"><button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой" title="Поделиться ссылкой">
     ${I_SHARE}${I_CHECK}
   </button></span>`);
   // пробел между чипами — не для вида (зазор даёт margin), а чтобы копирование
@@ -313,15 +315,15 @@ const entryHtml = (e, i) => {
   const medal = (cls, label, inner, style = "") =>
     `<span class="score${cls}"${style}><span class="sr-only">${label}</span><span class="n" aria-hidden="true">${inner}</span></span>`;
   const score = e.dropped
-    ? medal(" score--drop", "Дроп — оценки нет", "дроп")
+    ? medal(" score--drop", "Дропнул — оценки нет", "дроп")
     : e.fm.score === TBD
-    ? medal(" score--tbd", "Оценки пока нет", `—<span class="of">из 10</span>`)
+    ? medal(" score--tbd", "Оценки пока нет", "—")
     : medal("", `Оценка ${ruScore(e.fm.score)} из 10`,
         `${ruScore(e.fm.score)}<span class="of">из 10</span>`, ` style="--v:${e.fm.score}"`);
   const mediaPanel = !e.clip && !e.shots.length ? "" : `
     <div class="glass glass--media">
       ${e.clip ? videoHtml(e.clip, e.name, { poster: e.shots[0] ?? e.hero }) : ""}
-      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map((s, n) => shotHtml(s, `Кадр ${n + 1} из ${e.name}`)).join("")}</div>` : ""}
+      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(s, "")).join("")}</div>` : ""}
     </div>`;
   return `
   <article class="stage" id="${esc(e.slug)}" data-nav="${i}">
@@ -351,10 +353,18 @@ const entryHtml = (e, i) => {
 // этого не поедет: размеры кадра заданы атрибутами, место под него занято сразу
 const byYear = new Map();
 entries.forEach((e, i) => {
-  const y = e.playing ? "сейчас" : String(e.fm.finished).slice(0, 4);
+  const y = e.playing ? "сейчас играю" : String(e.fm.finished).slice(0, 4);
   if (!byYear.has(y)) byYear.set(y, []);
   byYear.get(y).push([e, i]);
 });
+// подпись карточки полки: цифры на постере aria-hidden, а без них после фильтра «9+»
+// непонятно, почему запись попала в срез — статус, оценка и часы проговариваются вслух
+const shelfSay = e => [
+  e.dropped ? "дроп" : e.playing ? "сейчас играю" : "пройдено",
+  e.dropped || e.fm.score === TBD ? "" : `${ruScore(e.fm.score)} из 10`,
+  typeof e.fm.hours === "number" ? ruHours(e.fm.hours) : "",
+].filter(Boolean).join(", ");
+
 // карточка несёт свои данные атрибутами — фильтр на клиенте считает по ним, без второго индекса
 const cardData = e => [
   `data-status="${e.dropped ? "drop" : e.playing ? "play" : "done"}"`,
@@ -365,12 +375,14 @@ const cardData = e => [
   e.moments.length ? `data-moments="${e.moments.length}"` : "",
 ].filter(Boolean).join(" ");
 
+// тег на постере — только глагол: полная форма «сейчас играю» встаёт в две строки
+// и закрывает пол-обложки; контекст даёт заголовок группы над сеткой
 const shelfHtml = [...byYear].map(([y, items]) => `
   <section class="shelf__year">
     <h3 class="mono">${y}</h3>
     <div class="shelf__grid">${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}" ${cardData(e)}
-         aria-label="${esc(e.name)}${e.dropped ? " (дроп)" : e.playing ? " (сейчас играю)" : ""}">
+         aria-label="${esc(e.name)} — ${shelfSay(e)}">
         <img src="${esc(e.poster ?? e.hero)}" alt="" loading="lazy" width="600" height="900">
         <span class="shelf__num mono" aria-hidden="true">
           <span class="${e.dropped || e.fm.score === TBD ? "dim" : "hi"}">${
@@ -445,36 +457,37 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
 <body id="top">
 <header class="site-head">
   <h1 class="wordmark">Хроника</h1>
-  <span class="mono">${ruGames(games)} · ${hours} ч</span>
+  <span class="mono">${ruGames(games)} · ${ruHours(hours)}</span>
 </header>
 <button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
 <button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="fab-label"> наверх</span></button>
+<span class="sr-only" id="say" role="status"></span>
 <main>${entries.map(entryHtml).join("")}</main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>
-  <span class="mono">Ассеты игр — Steam · <a href="https://artfaal.ru">artfaal</a></span>
+  <span class="mono">Обложки и кадры — Steam · <a href="https://artfaal.ru">artfaal</a></span>
 </footer>
 <dialog class="shelf" id="shelf" tabindex="-1" aria-labelledby="shelf-title">
-  <button class="x" id="shelf-x" aria-label="Закрыть">${I_CLOSE}</button>
+  <button class="x" id="shelf-x" aria-label="Закрыть полку">${I_CLOSE}</button>
   <h2 class="shelf__title" id="shelf-title">Полка</h2>
   <div class="shelf__find">
     <input class="shelf__q" id="shelf-q" type="search" autocomplete="off" autocapitalize="none" spellcheck="false"
-           placeholder="название игры" aria-label="Поиск игры по названию"
+           placeholder="название игры" aria-label="Найти игру"
            aria-controls="shelf-list" aria-describedby="shelf-hint">
-    <span class="sr-only" id="shelf-hint">Enter — перейти к выбранной игре, стрелки вверх и вниз — перебрать найденное.</span>
+    <span class="sr-only" id="shelf-hint">Enter открывает выбранную игру. Стрелки вверх и вниз перебирают найденное.</span>
     <span class="shelf__count mono" role="status"><span id="shelf-count"></span><span class="sr-only" id="shelf-pick"></span></span>
   </div>
   <div class="shelf__filters">${filtersHtml}
-    <div class="shelf__row"><button type="button" class="chip chip--filter chip--reset mono" id="shelf-reset" hidden>сбросить</button></div>
+    <div class="shelf__row"><button type="button" class="chip chip--filter chip--reset mono" id="shelf-reset" aria-label="Сбросить фильтры" hidden>сбросить</button></div>
   </div>
-  <nav class="shelf__list" id="shelf-list" aria-label="Список игр">${shelfHtml}</nav>
+  <nav class="shelf__list" id="shelf-list" aria-label="Игры по годам">${shelfHtml}</nav>
 </dialog>
-<dialog class="lb" id="lb" aria-label="Медиа записи">
-  <button class="x" id="lb-x" aria-label="Закрыть">${I_CLOSE}</button>
+<dialog class="lb" id="lb" aria-label="Кадры и видео записи">
+  <button class="x" id="lb-x" aria-label="Закрыть кадры">${I_CLOSE}</button>
   <div class="lb__stage" id="lb-stage" tabindex="-1" autofocus></div>
   <p class="cap"><span class="mono" id="lb-cap"></span><span class="mono lb__count" id="lb-count"></span></p>
-  <button class="lb__nav lb__nav--prev" id="lb-prev" aria-label="Предыдущее медиа">${I_PREV}</button>
-  <button class="lb__nav lb__nav--next" id="lb-next" aria-label="Следующее медиа">${I_NEXT}</button>
+  <button class="lb__nav lb__nav--prev" id="lb-prev" aria-label="Предыдущий кадр">${I_PREV}</button>
+  <button class="lb__nav lb__nav--next" id="lb-next" aria-label="Следующий кадр">${I_NEXT}</button>
 </dialog>
 <script src="app.js"></script>
 </body>
@@ -510,7 +523,7 @@ const stub = e => `<!doctype html>
 <meta http-equiv="refresh" content="0; url=/#${esc(e.slug)}">
 <link rel="canonical" href="${SITE}/#${esc(e.slug)}">
 </head>
-<body><a href="/#${esc(e.slug)}">${esc(e.name)} — открыть в хронике</a></body>
+<body><a href="/#${esc(e.slug)}">${esc(e.name)} — открыть в «Хронике»</a></body>
 </html>
 `;
 
