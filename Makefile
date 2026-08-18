@@ -16,7 +16,11 @@ serve: drafts
 	@echo "http://localhost:8480"
 	@cd dist && python3 -m http.server 8480 --bind 127.0.0.1
 
+# сторож от регресса: жадный poster= у <video> возвращается молча при любой правке
+# build.mjs и стоит мегабайты на первом экране. Проверяем собранное до rsync — дефект
+# ловится раньше, чем уезжает к читателю, и без похода в сеть
 deploy: build
+	@! grep -q ' poster="' dist/index.html || { echo "✗ в разметке снова poster= у <video>: кадры-заглушки качаются на первом экране (нужен data-poster)"; exit 1; }
 	rsync -az --delete dist/ $(DEPLOY_DEST)
 
 # клипы: video — отчёт по политике качества, video-fix — ещё и faststart без пережатия

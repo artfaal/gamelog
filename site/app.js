@@ -2,6 +2,10 @@
 // Ванильный JS, состояние — только DOM-классы.
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+// «экономия трафика» в браузере — прямая просьба не качать лишнего: клип весит мегабайты,
+// а автоплей тянет его целиком. Такой же выключатель автозапуска, как reduce-motion
+const saveData = navigator.connection?.saveData === true;
+const autoplay = !reduceMotion.matches && !saveData;
 
 // — полка: нативный переход по якорю, диалог просто закрывается —
 const shelf = document.getElementById("shelf");
@@ -210,6 +214,8 @@ const reelOf = el => [...el.closest("article.stage").querySelectorAll(".shotbtn 
 
 const lbShow = () => {
   const src = reel[pos];
+  // кадр мог не дождаться своей очереди у наблюдателя — в лайтбокс он идёт уже с адресом
+  if (src.dataset.src && !src.getAttribute("src")) src.src = src.dataset.src;
   const cap = src.alt || src.getAttribute("aria-label") || "";
   const node = document.createElement(src.tagName === "VIDEO" ? "video" : "img");
   node.src = src.src;
@@ -225,6 +231,14 @@ const lbGo = d => { pos = (pos + d + reel.length) % reel.length; lbShow(); };
 const lbOpen = media => {
   reel = reelOf(media);
   pos = reel.indexOf(media);
+  // клип в ленте продолжал бы играть под открытым лайтбоксом — два ролика разом.
+  // data-io говорит обработчику паузы, что она не ручная, data-lb — кого возобновлять
+  document.querySelectorAll("video.clip").forEach(v => {
+    if (v.paused) return;
+    v.dataset.io = "1";
+    v.dataset.lb = "1";
+    v.pause();
+  });
   lbShow();
   lb.showModal();
 };
@@ -246,11 +260,19 @@ lb.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") lbGo(-1);
   else if (e.key === "ArrowRight") lbGo(1);
 });
-lb.addEventListener("close", () => lbStage.replaceChildren());
+lb.addEventListener("close", () => {
+  lbStage.replaceChildren();
+  // возвращаем только те, что играли до открытия: поставленный на паузу руками так и стоит.
+  // autoplay тут не спрашиваем: при reduce-motion и saveData клип играет только с руки
+  // читателя — забрать его на время лайтбокса можно, не вернуть после закрытия нельзя
+  document.querySelectorAll("video.clip[data-lb]").forEach(v => {
+    delete v.dataset.lb;
+    if (!v.dataset.manual) v.play().catch(() => {});
+  });
+});
 
 // — видео: играет в кадре, пауза вне; ручная пауза уважается —
 {
-  const autoplay = !reduceMotion.matches;
   const vio = new IntersectionObserver(es => es.forEach(e => {
     const v = e.target;
     if (e.isIntersecting) {
@@ -266,6 +288,40 @@ lb.addEventListener("close", () => lbStage.replaceChildren());
     v.addEventListener("play", () => delete v.dataset.manual);
     vio.observe(v);
   });
+}
+
+// — постеры на подходе: сборка кладёт файл в data-poster, поведение живёт здесь —
+// обои узкого экрана (--poster для размытых слоёв) и кадр-заглушка клипа. Иначе браузер
+// тянет и то и другое сразу на всю ленту: постер из CSS-фона мимо lazy, кадр — мимо preload="none"
+{
+  const wake = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    wake.unobserve(el);
+    if (el.tagName === "VIDEO") el.poster = el.dataset.poster;
+    else if (el.tagName === "IMG") el.src = el.dataset.src;
+    else el.style.setProperty("--poster", `url('${el.dataset.poster}')`);
+  }), { rootMargin: "50% 0px" });
+  document.querySelectorAll("article.stage[data-poster], video.clip[data-poster]").forEach(el => wake.observe(el));
+
+  // кадры первой записи: loading="lazy" в разметке остаётся, но Chrome тянет lazy-картинку
+  // ещё за ~1250 px до экрана, а пара кадров первой записи лежит ближе — и приезжает
+  // на первый экран мегабайтами. Снимаем у неё адрес до первой раскладки и возвращаем
+  // на подходе, тем же наблюдателем. Дальше по ленте порог браузера уже никого не
+  // достаёт, там кадры остаются на нативном lazy и живут без JS
+  document.querySelector("article.stage")?.querySelectorAll("img.shot").forEach(img => {
+    img.dataset.src = img.getAttribute("src");
+    img.removeAttribute("src");
+    wake.observe(img);
+  });
+
+  // постеры полки: она в <dialog>, до открытия не грузится ни одна lazy-картинка — и сетка
+  // собиралась на глазах у читателя. Будим в простой, но не раньше первого движения по ленте:
+  // на первом экране эти полтора мегабайта отнимают канал у обоев, а к полке идут уже из чтения
+  const idle = typeof requestIdleCallback === "function" ? requestIdleCallback : cb => setTimeout(cb, 2000);
+  const warmShelf = () => idle(() =>
+    document.querySelectorAll("#shelf-list img[loading]").forEach(img => { img.loading = "eager"; }));
+  if (!saveData) addEventListener("scroll", warmShelf, { once: true, passive: true });
 }
 
 // — «наверх»: появляется, когда шапка ушла из вида —

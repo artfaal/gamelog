@@ -27,6 +27,7 @@ export default [
       globals: {
         document: "readonly", location: "readonly", navigator: "readonly",
         matchMedia: "readonly", IntersectionObserver: "readonly",
+        requestIdleCallback: "readonly",
         setTimeout: "readonly", scrollTo: "readonly",
         scrollY: "readonly", addEventListener: "readonly",
       },

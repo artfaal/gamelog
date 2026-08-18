@@ -45,6 +45,11 @@ export async function microtrailer(data) {
   return { value: null, known: false, movieid };
 }
 
+// Полке ретина не нужна, а posterSmall есть не во всех кэшах: записанные до его
+// появления переписывать нельзя (номера кадров поедут), поэтому лёгкий постер
+// выводим из имени ретинового. Обе формы URL остаются здесь, в одном месте.
+export const posterSmallOf = c => c?.posterSmall ?? c?.poster?.replace("_600x900_2x.jpg", "_600x900.jpg") ?? null;
+
 // Форма файла cache/<appid>.json. Меняешь её — меняешь здесь, и только здесь.
 export function appCache(appid, data, micro) {
   const cdn = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}`;
@@ -54,6 +59,9 @@ export function appCache(appid, data, micro) {
     hero: `${cdn}/library_hero.jpg`,
     logo: `${cdn}/logo.png`,
     poster: `${cdn}/library_600x900_2x.jpg`,
+    // полке ретина не нужна: карточка 2:3 в сетке — тот же кадр втрое легче.
+    // В кэшах, записанных раньше, поля нет — сборка падает на poster
+    posterSmall: `${cdn}/library_600x900.jpg`,
     shots: (data.screenshots ?? []).slice(0, 8).map(s => s.path_full),
     micro,
     // фасеты полки: жанры Steam как есть, кооп — из категорий

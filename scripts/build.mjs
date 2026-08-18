@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, ex
 import matter from "gray-matter";
 import { marked } from "marked";
 import { LIMITS } from "./video-policy.mjs";
+import { posterSmallOf } from "./steam-app.mjs";
 
 const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
@@ -145,6 +146,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     // текстом, на полку идёт кроп hero
     logo: fm.logo === "none" ? null : fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
     poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
+    // полка берёт готовый 600×900, а не ретиновый _2x: те же карточки втрое легче.
+    // Кэши, записанные до появления поля, его не имеют — падаем на poster
+    posterSmall: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : posterSmallOf(steam),
     // смысловой центр обоев по горизонтали: hero — широкий баннер, на узком экране
     // от него видно ~пятую часть ширины, и центр кадра сплошь и рядом не там
     focus: fm.focus ?? null,
@@ -209,6 +213,7 @@ for (const e of entries) {
   e.hero = await localize(e.hero, id);
   if (e.logo) e.logo = await localize(e.logo, id);
   if (e.poster) e.poster = await localize(e.poster, id);
+  if (e.posterSmall) e.posterSmall = await localize(e.posterSmall, id);
   e.shots = await Promise.all(e.shots.map(u => localize(u, id)));
   if (e.clip) e.clip = await localize(e.clip, id);
   for (const m of e.moments) if (m.shot) m.shot = await localize(m.shot, id);
@@ -274,22 +279,23 @@ const metaLine = e => {
 };
 
 // закрытый спойлер прячется одним inert: он же убирает содержимое из чтения скринридером
-// переменные обоев: --focus — смысловой центр кропа, --poster — тот же файл постера
-// для размытой подложки на узком экране (второй загрузки не будет, url совпадает с <source>)
-const heroVars = e => {
-  const v = [
-    e.focus != null ? `--focus:${e.focus}%` : "",
-    e.poster ? `--poster:url('${esc(e.poster).replace(/'/g, "%27")}')` : "",
-  ].filter(Boolean);
-  return v.length ? ` style="${v.join(";")}"` : "";
-};
+// --focus — смысловой центр кропа. Файл постера для размытой подложки узкого экрана
+// уезжает в data-poster: инлайновый url() в CSS-переменной грузился бы у всех записей
+// разом, минуя loading="lazy". --poster из него ставит app.js на подходе к записи
+const heroVars = e => e.focus != null ? ` style="--focus:${e.focus}%"` : "";
+// единственное место, где собирается атрибут кадра-заглушки — и для записи, и для клипа.
+// значение в апострофах: так во всём исходнике сборки не остаётся жадного атрибута
+// кадра-заглушки, и grep-сторож ловит ровно его, а не собственный data-poster
+const dataPoster = url => url ? ` data-poster='${esc(url).replace(/'/g, "%27")}'` : "";
+// кадр-заглушку браузер тянет немедленно даже при preload="none" — на первом экране
+// это мегабайты за клипы, до которых читатель ещё не доехал. Ставит его app.js на подходе
 const videoHtml = (src, label, { poster = "", preload = "none", hidden = false } = {}) =>
-  `<video class="clip" src="${esc(src)}" muted loop playsinline controls preload="${preload}"${poster ? ` poster="${esc(poster)}"` : ""}
+  `<video class="clip" src="${esc(src)}" muted loop playsinline controls preload="${preload}"${dataPoster(poster)}
       aria-label="Видео: ${esc(label)}"${hidden ? " inert" : ""}></video>`;
 
 // кадр — кнопка: лайтбокс доступен с клавиатуры
 const shotHtml = (src, alt, hidden = false) =>
-  `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" width="1920" height="1080"></button>`;
+  `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async" width="1920" height="1080"></button>`;
 
 const momentMedia = m =>
   !m.shot ? ""
@@ -308,7 +314,7 @@ const momentsHtml = e => e.moments.length
 
 const entryHtml = (e, i) => {
   const logo = e.logo
-    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo" src="${esc(e.logo)}" alt="" loading="lazy">`
+    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo" src="${esc(e.logo)}" alt="" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}>`
     : `<h2 class="logo-text">${esc(e.name)}</h2>`;
   // оценка — медаль на верхней кромке панели; дуга кольца = сама оценка (--v: 0…10).
   // подпись для скринридера — отдельным sr-only: aria-label на голом span не работает
@@ -326,7 +332,7 @@ const entryHtml = (e, i) => {
       ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(s, "")).join("")}</div>` : ""}
     </div>`;
   return `
-  <article class="stage" id="${esc(e.slug)}" data-nav="${i}">
+  <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}>
     <div class="hero${e.poster ? " hero--poster" : ""}"${heroVars(e)}>
       <picture>
         ${e.poster ? `<source media="${NARROW}" srcset="${esc(e.poster)}" width="600" height="900">` : ""}
@@ -383,7 +389,7 @@ const shelfHtml = [...byYear].map(([y, items]) => `
     <div class="shelf__grid">${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}" ${cardData(e)}
          aria-label="${esc(e.name)} — ${shelfSay(e)}">
-        <img src="${esc(e.poster ?? e.hero)}" alt="" loading="lazy" width="600" height="900">
+        <img src="${esc(e.posterSmall ?? e.hero)}" alt="" loading="lazy" decoding="async" width="600" height="900">
         <span class="shelf__num mono" aria-hidden="true">
           <span class="${e.dropped || e.fm.score === TBD ? "dim" : "hi"}">${
             e.dropped ? "дроп" : e.fm.score === TBD ? "—" : ruScore(e.fm.score)}</span>
@@ -433,6 +439,14 @@ const filtersHtml =
 const games = new Set(entries.map(gameKey)).size;
 const hours = entries.reduce((s, e) => s + (typeof e.fm.hours === "number" ? e.fm.hours : 0), 0);
 
+// LCP первого экрана — обои первой записи. Браузер узнаёт о них, только разобрав
+// <picture> в конце документа; preload с тем же media поднимает нужный файл в начало
+// очереди. Условие широкого экрана — ровно дополнение NARROW, менять парой
+const preloadLcp = !entries[0] ? "" : [
+  entries[0].poster ? [entries[0].poster, ` media="${NARROW}"`] : null,
+  [entries[0].hero, entries[0].poster ? ' media="(min-width: 48.0625rem)"' : ""],
+].filter(Boolean).map(([u, m]) => `<link rel="preload" href="${esc(u)}" as="image"${m}>`).join("\n");
+
 const page = `<!doctype html>
 <html lang="ru">
 <head>
@@ -452,6 +466,7 @@ ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}"
      самый крупный кегль первого экрана — просится вперёд. crossorigin обязателен и
      для своего домена: шрифт грузится в CORS-режиме, без атрибута файл поедет дважды -->
 <link rel="preload" href="fonts/cormorant-garamond-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+${preloadLcp}
 <link rel="stylesheet" href="styles.css">
 </head>
 <body id="top">

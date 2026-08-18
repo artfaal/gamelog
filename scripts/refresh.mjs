@@ -14,7 +14,7 @@
 //   NODE_USE_ENV_PROXY=1 HTTPS_PROXY=… node scripts/refresh.mjs …
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 import matter from "gray-matter";
-import { fetchApp, microtrailer, appCache } from "./steam-app.mjs";
+import { fetchApp, microtrailer, appCache, posterSmallOf } from "./steam-app.mjs";
 
 // ---------- аргументы ----------
 const args = process.argv.slice(2);
@@ -33,7 +33,7 @@ if ((!ids.length && !all) || (ids.length && all) || (fi !== -1 && (!fieldsArg ||
 // shots двигает нумерацию кадров в записях, micro подменяет клип всем записям с clip: store
 // и записям без clip (сборка подставляет микротрейлер сама) — молча их переписывать нельзя
 const RISKY = ["shots", "micro"];
-const SAFE = ["name", "hero", "logo", "poster", "genres", "coop"];
+const SAFE = ["name", "hero", "logo", "poster", "posterSmall", "genres", "coop"];
 const KNOWN = [...SAFE, ...RISKY];
 
 const fields = fieldsArg ? fieldsArg.split(",").map(s => s.trim()).filter(Boolean) : null;
@@ -71,6 +71,11 @@ for (const appid of targets) {
 // у скринов в хвосте ?t=… — метка последнего апдейта страницы: меняется сама по себе,
 // а сборка кэширует ассет по имени файла. Считать это расхождением — гнать мусорный дифф
 const bare = u => (typeof u === "string" ? u.split("?")[0] : u);
+// posterSmall завели позже самих кэшей: в записанных до него файлах поля нет, а appCache()
+// всегда отдаёт URL. Сравнивать сырое было бы «разошлись все и навсегда» — переписывать
+// старые кэши ради одного поля канон запрещает. Берём то же, что берёт сборка: posterSmallOf()
+// выводит лёгкий постер из ретинового, когда поля нет.
+const wasField = (k, was) => (k === "posterSmall" ? posterSmallOf(was) : was[k]);
 const same = (k, was, now) =>
   k === "shots" ? JSON.stringify((was ?? []).map(bare)) === JSON.stringify(now.map(bare))
     : k === "genres" ? JSON.stringify(was ?? []) === JSON.stringify(now)
@@ -129,13 +134,13 @@ for (const appid of targets) {
     process.exit(1);
   }
   const now = appCache(appid, data, micro);
-  const changed = need.filter(k => (k !== "micro" || microKnown) && !same(k, was[k], now[k]));
+  const changed = need.filter(k => (k !== "micro" || microKnown) && !same(k, wasField(k, was), now[k]));
 
   if (!fields) {  // режим дифа: ни байта в файл
     if (!changed.length && microKnown) { console.log(`= ${appid} ${now.name}`); continue; }
     off++;
     console.log(`≠ ${appid} ${now.name}`);
-    for (const k of changed) console.log(`  ${k.padEnd(7)} ${describe(k, was[k], now[k])}`);
+    for (const k of changed) console.log(`  ${k.padEnd(7)} ${describe(k, wasField(k, was), now[k])}`);
     if (!microKnown) console.log("  micro   не проверился (сеть) — поле пропущено");
     if (changed.includes("shots")) for (const r of refs(appid)) console.log(`  ↳ ${r}`);
     continue;
@@ -146,7 +151,7 @@ for (const appid of targets) {
   for (const k of changed) next[k] = now[k];
   writeFileSync(file, JSON.stringify(next, null, 2) + "\n");  // формат — как у new.mjs, иначе мусорный дифф в git
   console.log(`${file} — обновлено: ${changed.join(", ")}`);
-  for (const k of changed) console.log(`  ${k.padEnd(7)} ${describe(k, was[k], now[k])}`);
+  for (const k of changed) console.log(`  ${k.padEnd(7)} ${describe(k, wasField(k, was), now[k])}`);
   if (changed.includes("shots")) {
     console.log("  ⚠ номера кадров съехали — перепроверь записи:");
     for (const r of refs(appid)) console.log(`  ↳ ${r}`);
