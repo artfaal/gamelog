@@ -426,11 +426,11 @@ const page = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Хроника</title>
+<title>Хроника — игровой дневник</title>
 <meta name="description" content="Игровой дневник: ${ruGames(games)}, ${ruHours(hours)}.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Хроника">
-<meta property="og:description" content="Игровой дневник: впечатления, кадры, воспоминания.">
+<meta property="og:title" content="Хроника — игровой дневник">
+<meta property="og:description" content="Игры заканчиваются. Воспоминания — нет.">
 ${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}">
 <meta property="og:image:alt" content="Обложка: ${esc(entries[0].name)}">` : ""}
 <meta property="og:url" content="${SITE}/">

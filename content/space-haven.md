@@ -3,7 +3,7 @@ steam: 979110
 finished: 2026-05-25
 hours: 8
 dropped: true
-verdict: Хорошая игра, которой не повезло с конкурентами.
+verdict: Проиграла Rimworld, даже не начав.
 shots: [0, 6]
 clip: none
 ---
