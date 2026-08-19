@@ -68,6 +68,10 @@
   unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 :root {
+  /* объявление для браузерного хрома, а не тема: скроллбар, поля ввода и меню
+     выбора рисуются тёмными сами. Светлой темы у дневника нет — фон здесь не цвет,
+     а арт игры */
+  color-scheme: dark;
   --color-paper:    oklch(13% 0.008 70);
   --color-paper-2:  oklch(16% 0.010 70);
   --color-rule:     oklch(28% 0.010 70);
@@ -144,6 +148,32 @@ dialog { margin: auto; }
    независимо от специфичности. Итог — закрытая полка висела блоком после футера.
    Правило на всех диалогов сразу: специфичность 0,1,1 берёт верх над .shelf */
 dialog:not([open]) { display: none; }
+/* модалка проявляется, а не возникает рывком. display и overlay — дискретные свойства:
+   без allow-discrete браузер снял бы окно с экрана до конца перехода. @starting-style —
+   состояние, из которого окно въезжает. Под reduce-motion длительность срезается
+   общим правилом в конце файла, и появление снова мгновенное */
+dialog {
+  opacity: 0;
+  transform: translateY(6px) scale(0.99);
+  transition:
+    opacity var(--dur-short) var(--ease-out),
+    transform var(--dur-short) var(--ease-out),
+    display var(--dur-short) allow-discrete,
+    overlay var(--dur-short) allow-discrete;
+}
+dialog[open] { opacity: 1; transform: none; }
+dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity var(--dur-short) var(--ease-out),
+    display var(--dur-short) allow-discrete,
+    overlay var(--dur-short) allow-discrete;
+}
+dialog[open]::backdrop { opacity: 1; }
+@starting-style {
+  dialog[open] { opacity: 0; transform: translateY(6px) scale(0.99); }
+  dialog[open]::backdrop { opacity: 0; }
+}
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; transition: none; }
 ::selection { background: var(--color-accent); color: var(--color-scrim); }
 h2, h3, h4 {
@@ -221,10 +251,15 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
 /* --focus (задаёт focus: во фронтматтере) — смысловой центр обоев по горизонтали:
    кроп широкого hero под экран съедает бока, и середина файла редко совпадает с сюжетом */
 .hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50%) center; }
+/* стык записей: хвост уезжающей дотаивает в цвет страницы, верх приезжающей из него всплывает —
+   на шве встречаются два фона, а не резаная кромка. Верхний слой — общий скрим под панели */
 .hero::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
+  background:
+    linear-gradient(to bottom, var(--color-paper) 20px, transparent 130px),
+    linear-gradient(to top, var(--color-paper) 40px, transparent 320px),
+    linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
 }
 .hero .logo, .hero .logo-text {
   position: absolute;
@@ -234,6 +269,10 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   z-index: var(--z-raised);
 }
 .hero .logo { max-height: 88px; max-width: min(60vw, 360px); width: auto; object-fit: contain; filter: drop-shadow(0 2px 20px var(--color-scrim)); }
+/* логотип игры нарисован тёмным (logo: dark во фронтматтере): общая тёмная тень
+   на светлом арте его не отделяет, а сливает с фоном. Светлая тень двумя слоями —
+   плотный ореол по контуру и мягкий разлёт */
+.hero .logo--dark { filter: drop-shadow(0 0 6px oklch(98% 0 0 / 0.9)) drop-shadow(0 2px 24px oklch(96% 0 0 / 0.6)); }
 .hero .logo-text {
   font-size: var(--text-2xl);
   text-align: center;
@@ -251,12 +290,16 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   justify-items: center;
 }
 .glass {
+  /* --w: предел ширины панели. У медиа он свой — кадру ширина в пользу,
+     а панель текста держит ровно свою колонку (75ch), иначе она на треть шире
+     того, что в ней лежит, и правый край панели повисает пустотой */
+  --w: 76rem;
   background: var(--color-scrim-strong);
   backdrop-filter: blur(8px);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
-  width: min(100% - 8rem, 76rem);
+  width: min(100% - 8rem, var(--w));
 }
 /* мета — лента чипов: каждый кусок самодостаточен, разделители не нужны.
    Блок с float-заглушкой, а не flex: место под медаль нужно только первой строке,
@@ -318,8 +361,8 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
 .chip--link:active { color: var(--color-ink); }
 .chip--btn { padding-inline: var(--space-xs); }
 .chip--btn:hover { border-color: var(--color-neutral); }
-.glass.note { position: relative; padding-top: var(--space-xl); }
-.note p { max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
+.glass.note { --w: 54rem; position: relative; padding-top: var(--space-xl); }
+.note p { text-wrap: pretty; max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
 /* название игры над вердиктом: логотип на арте при чтении уезжает вверх,
    и запись перестаёт отвечать на «а это про что». aria-hidden — имя уже
@@ -336,6 +379,9 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   color: var(--color-neutral);
 }
 .verdict {
+  /* вердикт — самый крупный текст записи: balance не даёт последней строке
+     остаться одним словом */
+  text-wrap: balance;
   font-family: var(--font-display);
   font-size: var(--text-xl);
   line-height: 1.2;
@@ -567,7 +613,6 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 }
 .shelf__q::placeholder { color: var(--color-neutral); }
 .shelf__q:focus-visible { border-color: var(--color-accent); }
-.shelf__q::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
 .shelf__count { white-space: nowrap; }
 .shelf__sort {
   font-family: var(--font-mono);
@@ -775,6 +820,12 @@ dialog .x svg { width: 18px; height: 18px; }
 dialog .x:hover { color: var(--color-ink); background: var(--color-scrim-strong); }
 dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
+/* нет backdrop-filter (старый Firefox, отключённый флаг) — контраст держала одна
+   прозрачность, и текст под панелью просвечивал насквозь. Фон становится плотным */
+@supports not (backdrop-filter: blur(2px)) {
+  .site-head, .glass, .shelf-btn, .top-btn { background: var(--color-scrim-solid); }
+}
+
 /* ———— мобилка ———— */
 /* узкий экран. Брейкпоинт дублируется в NARROW в scripts/build.mjs (<source media>) —
    менять обязательно парой, иначе постер и мобильная вёрстка включатся на разной ширине */
@@ -854,15 +905,6 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
       transparent calc(var(--bleed) + var(--poster-h) - 62px),
       #000 calc(var(--bleed) + var(--poster-h) + 56px));
   }
-  /* стык записей: хвост уезжающей дотаивает в цвет страницы, верх приезжающей из него всплывает —
-     на шве встречаются два фона, а не резаная кромка. Всем обоям, а не только постерным:
-     у записи без постера кромка кадра такая же резкая */
-  .hero::after {
-    background:
-      linear-gradient(to bottom, var(--color-paper) 20px, transparent 130px),
-      linear-gradient(to top, var(--color-paper) 40px, transparent 320px),
-      linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
-  }
   .body { margin-top: -10svh; }
   /* постер прижат к верху, вся размытая полоса собрана внизу — панель начинается
      ровно на ней: низ постера при ширине экрана = 150vw (2:3). min() возвращает
@@ -895,6 +937,8 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  /* ::backdrop не попадает под «*» — переходу подложки длительность срезаем отдельно */
+  dialog::backdrop { transition-duration: 0.01ms !important; }
   /* кнопки не едут, а гаснут: пространственное движение здесь необязательное */
   .fabs-away .shelf-btn, .fabs-away .top-btn { transform: none; }
 }

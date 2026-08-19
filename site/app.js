@@ -14,9 +14,30 @@ const shelf = document.getElementById("shelf");
 const wall = document.getElementById("wall");
 const shelfList = document.getElementById("shelf-list");
 document.getElementById("shelf-x").addEventListener("click", () => shelf.close());
+// одно имя на пару «кадр там — кадр тут»: браузер снимает старое и новое состояние
+// и сам достраивает движение между ними. Имя снимается после перехода — иначе на
+// странице осталось бы два элемента с одним именем, и следующий переход не начался бы
+const MORPH = "morph";
+const morphs = document.startViewTransition !== undefined;
+const morphTo = (from, to, run) => {
+  if (!morphs || reduceMotion.matches || !from || !to) return run();
+  from.style.viewTransitionName = MORPH;
+  document.startViewTransition(() => {
+    from.style.removeProperty("view-transition-name");
+    run();
+    to().style.viewTransitionName = MORPH;
+    // переход мог и не состояться (браузер его пропустил) — имя снимаем в любом исходе
+  }).finished.catch(() => {}).finally(() => to()?.style.removeProperty("view-transition-name"));
+};
 shelf.addEventListener("click", e => {
-  if (e.target === shelf) shelf.close();
-  else if (e.target.closest("a[data-nav-to]")) shelf.close();
+  if (e.target === shelf) return shelf.close();
+  const a = e.target.closest("a[data-nav-to]");
+  if (!a) return;
+  // переход полка → запись: постер карточки вырастает в обои записи
+  const hero = document.getElementById(a.hash.slice(1))?.querySelector("img.bg");
+  if (!morphs || reduceMotion.matches || !hero) return shelf.close();
+  e.preventDefault();
+  morphTo(a.querySelector("img"), () => hero, () => { shelf.close(); location.hash = a.hash; });
 });
 
 // — поиск на полке: набор фильтрует сетку постеров, Enter ведёт к лучшему совпадению —
@@ -338,8 +359,8 @@ const lbOpen = media => {
     v.dataset.lb = "1";
     v.pause();
   });
-  lbShow();
-  lb.showModal();
+  // вход в лайтбокс — кадр вырастает из кликнутого, а не возникает поверх
+  morphTo(media, () => lbStage.firstElementChild, () => { lbShow(); lb.showModal(); });
 };
 
 // вход в лайтбокс — кадром; ролики листаются внутри, уже открытым

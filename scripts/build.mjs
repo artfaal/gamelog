@@ -2,6 +2,8 @@
 // build.mjs [--drafts] — собирает dist/ из content/*.md + cache/*.json.
 // Один проход, без вотчеров и инкрементальности: контента десятки записей.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { dirname } from "node:path";
 import matter from "gray-matter";
 import { marked } from "marked";
 import { LIMITS } from "./video-policy.mjs";
@@ -157,7 +159,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     hero: media(fm.hero ?? steam?.hero),
     // none — у части игр логотипа и постера в Steam нет (404): имя рисуется
     // текстом, на полку идёт кроп hero
-    logo: fm.logo === "none" ? null : fm.logo != null ? media(fm.logo) : steam?.logo ?? null,
+    logo: fm.logo === "none" ? null : fm.logo != null && fm.logo !== "dark" ? media(fm.logo) : steam?.logo ?? null,
+    // dark — не путь, а признак вида: логотип игры нарисован тёмным, и на светлом
+    // арте ему нужна светлая тень вместо общей тёмной. Ставится руками, глазами
+    logoDark: fm.logo === "dark",
     poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
     // полка берёт готовый 600×900, а не ретиновый _2x: те же карточки втрое легче.
     // Кэши, записанные до появления поля, его не имеют — падаем на poster
@@ -326,7 +331,7 @@ const momentsHtml = e => e.moments.length
 
 const entryHtml = (e, i) => {
   const logo = e.logo
-    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo" src="${esc(e.logo)}" alt="" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}>`
+    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo${e.logoDark ? " logo--dark" : ""}" src="${esc(e.logo)}" alt="" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}>`
     : `<h2 class="logo-text">${esc(e.name)}</h2>`;
   // оценка — медаль на верхней кромке панели; дуга кольца = сама оценка (--v: 0…10).
   // подпись для скринридера — отдельным sr-only: aria-label на голом span не работает
@@ -465,6 +470,32 @@ const filtersHtml =
   CHIPS.map(([label, items, opts]) => chipRow(label, items, opts)).join("") +
   chipRow("жанр", genres.map(g => ({ k: "genre", v: g, lab: g })));
 
+// og:image главной — коллаж из свежих постеров: ссылку на дневник кидают в чат,
+// и карточка должна показывать дневник, а не одну случайную игру. Склейка ffmpeg —
+// в проекте он уже канонический инструмент (политики клипов и кадров). Нет ffmpeg
+// или мало постеров — сборка не падает, og:image остаётся героем первой записи
+const OG_FILE = "cache/assets/og.jpg";
+const OG_REL = "og.jpg";
+const ogSrcOf = rel => toCopy.get(rel) ?? `content/${rel}`;
+let ogImage = entries[0] ? entries[0].hero : null;
+let ogAlt = entries[0] ? `Обложка: ${entries[0].name}` : "";
+{
+  const src = entries.map(e => e.posterSmall).filter(Boolean).slice(0, 3).map(ogSrcOf);
+  if (src.length < 3) console.warn("⚠ постеров меньше трёх — коллаж для og:image не собирается");
+  else {
+    // три постера 2:3 в кадр 1200×630: каждый по высоте карточки, бока подрезаны
+    const chain = src.map((_, i) => `[${i}]scale=-2:630,crop=400:630[p${i}]`).join(";");
+    const r = spawnSync("ffmpeg", ["-y", ...src.flatMap(f => ["-i", f]),
+      "-filter_complex", `${chain};[p0][p1][p2]hstack=inputs=3`,
+      "-frames:v", "1", "-q:v", "3", OG_FILE], { stdio: "ignore" });
+    if (r.status === 0) {
+      toCopy.set(OG_REL, OG_FILE);
+      ogImage = OG_REL;
+      ogAlt = "Хроника — постеры последних игр";
+    } else console.warn(`⚠ ffmpeg не собрал коллаж (${r.error?.code ?? r.status}) — og:image главной остаётся обложкой первой записи`);
+  }
+}
+
 // счётчик считает всё подряд: дропы и «сейчас играю» тоже игры, часы — сумма всех заходов
 const games = new Set(entries.map(gameKey)).size;
 const hours = entries.reduce((s, e) => s + (typeof e.fm.hours === "number" ? e.fm.hours : 0), 0);
@@ -487,8 +518,8 @@ const page = `<!doctype html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Хроника — игровой дневник">
 <meta property="og:description" content="Игры заканчиваются. Воспоминания — нет.">
-${entries[0] ? `<meta property="og:image" content="${esc(abs(entries[0].hero))}">
-<meta property="og:image:alt" content="Обложка: ${esc(entries[0].name)}">` : ""}
+${ogImage ? `<meta property="og:image" content="${esc(abs(ogImage))}">
+<meta property="og:image:alt" content="${esc(ogAlt)}">` : ""}
 <meta property="og:url" content="${SITE}/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <!-- шрифты живут в styles.css и раздаются со своего домена; браузер узнаёт о них
@@ -600,7 +631,7 @@ for (const e of entries) {
   writeFileSync(`dist/e/${e.slug}/index.html`, stub(e));
 }
 for (const [rel, file] of toCopy) {
-  mkdirSync(`dist/${rel.slice(0, rel.lastIndexOf("/"))}`, { recursive: true });
+  mkdirSync(dirname(`dist/${rel}`), { recursive: true });
   cpSync(file, `dist/${rel}`);
 }
 
