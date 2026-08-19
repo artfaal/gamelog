@@ -455,6 +455,17 @@ genres: [RPG, Adventure]
   → INFRA-DOCS `servers/orion.md`
 - DNS: A-запись `games` в Cloudflare (скилл cloudflare-dns)
 - Деплой: `make deploy` (сборка + rsync), CI нет намеренно
+- Заголовки ответа задаёт `nginx.conf` рядом с `docker-compose.yml` на orion
+  (в репозитории его нет — правка живёт на сервере):
+  - `gzip on` с `gzip_proxied any` для `text/css application/javascript
+    image/svg+xml` от 1 КБ. `gzip_proxied any` обязателен: впереди Caddy, он
+    ставит заголовок `Via`, а при значении по умолчанию nginx проксированные
+    запросы не жмёт. HTML nginx жмёт всегда, его в списке типов не пишут.
+  - `Cache-Control`: `/a/` и `/fonts/` — `public, max-age=31536000, immutable`
+    (имя файла стабильно, ассет под тем же именем не перезаписывается);
+    `/` и `*.html` — `no-cache`, HTML меняется каждой сборкой.
+  - Файл смонтирован отдельным файлом, поэтому после правки нужен
+    `docker compose up -d --force-recreate`: `nginx -s reload` читает старый inode.
 
 ## История дизайна
 
