@@ -9,6 +9,10 @@ const autoplay = !reduceMotion.matches && !saveData;
 
 // — полка: нативный переход по якорю, диалог просто закрывается —
 const shelf = document.getElementById("shelf");
+// сетка постеров — один узел на два места: стена в хвосте ленты и полка. Переносим,
+// а не копируем: две разметки для одного факта разъехались бы на первой же правке
+const wall = document.getElementById("wall");
+const shelfList = document.getElementById("shelf-list");
 document.getElementById("shelf-x").addEventListener("click", () => shelf.close());
 shelf.addEventListener("click", e => {
   if (e.target === shelf) shelf.close();
@@ -27,7 +31,7 @@ const shelfFCount = document.getElementById("shelf-fcount");
 const shelfSort = document.getElementById("shelf-sort");
 const sayBox = document.getElementById("say");                // короткие сообщения скрипта вслух
 const say = msg => { sayBox.textContent = ""; setTimeout(() => sayBox.textContent = msg, 50); };   // кандидат под Enter — вслух, для скринридера
-const shelfItems = [...shelf.querySelectorAll("#shelf-list a")].map(el => ({
+const shelfItems = [...shelfList.querySelectorAll("a")].map(el => ({
   el,
   name: el.title,
   slug: el.hash.slice(1),
@@ -169,14 +173,12 @@ const shelfClear = () => {
 };
 document.getElementById("shelf-empty-reset").addEventListener("click", shelfClear);
 
-// набранное сбрасывается на каждом открытии, выбранные чипы — нет:
-// запрос разовый, а фильтр — режим просмотра, в котором читатель остаётся
 const shelfOpen = focus => {
-  shelfQ.value = "";
   shelfFind();
   // свёрнутый фильтр не съедает экран, пока им не пользуются; включённый — раскрыт,
   // иначе непонятно, почему в сетке четыре игры вместо шестнадцати
   shelfFilters.open = shelfChips.some(c => c.getAttribute("aria-pressed") === "true");
+  shelf.append(shelfList);
   shelf.showModal();
   shelfBtn.setAttribute("aria-expanded", "true");
   // без фокуса поля фокус уехал бы на крестик и мигал кольцом — уводим в сам диалог
@@ -185,7 +187,15 @@ const shelfOpen = focus => {
   // полка открывается там, где читатель сейчас: активную карточку видно без прокрутки
   shelfGrid.querySelector("a.on")?.scrollIntoView({ block: "center" });
 };
-shelf.addEventListener("close", () => shelfBtn.setAttribute("aria-expanded", "false"));
+shelf.addEventListener("close", () => {
+  shelfBtn.setAttribute("aria-expanded", "false");
+  // набранное снимается с закрытием, выбранные чипы — нет: запрос разовый, а фильтр —
+  // режим просмотра. Сетка та же самая и остаётся в хвосте ленты стеной: уехал бы туда
+  // и последний поиск — стена показывала бы одну обложку из семнадцати
+  shelfQ.value = "";
+  shelfFind();
+  wall.append(shelfList);   // стена возвращается на место
+});
 // на телефоне поле не фокусируем — иначе диалог открывается под выехавшей клавиатурой
 shelfBtn.addEventListener("click", () =>
   shelfOpen(matchMedia("(hover: hover) and (pointer: fine)").matches));
@@ -229,7 +239,7 @@ shelfQ.addEventListener("keydown", e => {
     e.preventDefault();
     shelfPos = (shelfPos + (e.key === "ArrowDown" ? 1 : -1) + shelfHits.length) % shelfHits.length;
     shelfPaint();
-    shelfHits[shelfPos].el.scrollIntoView({ block: "nearest" });
+    shelfHits[shelfPos].el.scrollIntoView({ block: "nearest", behavior: reduceMotion.matches ? "auto" : "smooth" });
   }
 });
 
@@ -273,7 +283,15 @@ document.addEventListener("click", async e => {
   if (!btn) return;
   const url = `${location.origin}/e/${btn.dataset.slug}/`;
   if (navigator.share) { navigator.share({ title: btn.dataset.name, url }).catch(() => {}); return; }
-  try { await navigator.clipboard.writeText(url); } catch { return; }
+  try { await navigator.clipboard.writeText(url); }
+  catch {
+    // провал виден и глазами: say() — строка sr-only, с ней зрячий читатель
+    // не отличил бы неудачу от успеха и ушёл бы с пустым буфером
+    btn.classList.add("err");
+    say("Скопировать не вышло — буфер обмена недоступен");
+    setTimeout(() => btn.classList.remove("err"), 3000);
+    return;
+  }
   btn.classList.add("ok");
   say("Ссылка скопирована");   // имя кнопки остаётся на месте: подмена на 1,5 с прячет действие
   setTimeout(() => btn.classList.remove("ok"), 1500);
@@ -286,7 +304,7 @@ const lbCap = document.getElementById("lb-cap");
 const lbCount = document.getElementById("lb-count");
 const lbPrev = document.getElementById("lb-prev");
 const lbNext = document.getElementById("lb-next");
-let reel = [], pos = 0;
+let reel = [], pos = 0, lbFrom = null;
 
 // лента записи в порядке вёрстки: клип шапки, кадры, моменты; спойлер до раскрытия не листается
 const reelOf = el => [...el.closest("article.stage").querySelectorAll(".shotbtn img, video.clip")]
@@ -309,6 +327,7 @@ const lbShow = () => {
 };
 const lbGo = d => { pos = (pos + d + reel.length) % reel.length; lbShow(); };
 const lbOpen = media => {
+  lbFrom = document.activeElement;
   reel = reelOf(media);
   pos = reel.indexOf(media);
   // клип в ленте продолжал бы играть под открытым лайтбоксом — два ролика разом.
@@ -342,6 +361,9 @@ lb.addEventListener("keydown", e => {
 });
 lb.addEventListener("close", () => {
   lbStage.replaceChildren();
+  // кадр мог уехать из DOM (спойлер перерисовал момент) — тогда фокус просто не трогаем
+  if (lbFrom?.isConnected) lbFrom.focus();
+  lbFrom = null;
   // возвращаем только те, что играли до открытия: поставленный на паузу руками так и стоит.
   // autoplay тут не спрашиваем: при reduce-motion и saveData клип играет только с руки
   // читателя — забрать его на время лайтбокса можно, не вернуть после закрытия нельзя
@@ -404,11 +426,9 @@ lb.addEventListener("close", () => {
   if (!saveData) addEventListener("scroll", warmShelf, { once: true, passive: true });
 }
 
-// — «наверх»: появляется, когда шапка ушла из вида —
+// — «наверх»: появляется, когда читатель отъехал от начала. По глубине прокрутки,
+//   а не по шапке: липкая, она из вида больше не уходит —
 const topBtn = document.getElementById("top-btn");
-new IntersectionObserver(es =>
-  topBtn.classList.toggle("show", !es[0].isIntersecting)
-).observe(document.querySelector(".site-head"));
 topBtn.addEventListener("click", () => scrollTo({
   top: 0,
   behavior: reduceMotion.matches ? "auto" : "smooth",
@@ -418,17 +438,22 @@ topBtn.addEventListener("click", () => scrollTo({
 //   едет вниз, и возвращаются, как только он двинулся вверх —
 let lastY = scrollY;
 addEventListener("scroll", () => {
+  topBtn.classList.toggle("show", scrollY > 400);
   const dy = scrollY - lastY;
   if (Math.abs(dy) < 6) return;                       // дрожание пальца — не сигнал
   document.body.classList.toggle("fabs-away", dy > 0 && scrollY > 200);
   lastY = scrollY;
 }, { passive: true });
 
-// — scroll-spy: активная запись на полке —
+// — scroll-spy: активная запись на полке и в шапке —
+const headNow = document.getElementById("head-now");
+const stages = document.querySelectorAll("[data-nav]");
 const spy = new IntersectionObserver(es => {
   es.forEach(e => {
     if (!e.isIntersecting) return;
     const i = e.target.dataset.nav;
+    // имя записи уже есть в её заголовке — второй копии в атрибуте не заводим
+    headNow.textContent = `${Number(i) + 1} из ${stages.length} · ${e.target.querySelector("h2").textContent}`;
     document.querySelectorAll("[data-nav-to]").forEach(a => {
       const on = a.dataset.navTo === i;
       a.classList.toggle("on", on);
@@ -437,4 +462,4 @@ const spy = new IntersectionObserver(es => {
     });
   });
 }, { rootMargin: "-35% 0px -55% 0px" });
-document.querySelectorAll("[data-nav]").forEach(el => spy.observe(el));
+stages.forEach(el => spy.observe(el));

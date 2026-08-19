@@ -127,7 +127,6 @@
 /* ———— база ———— */
 *, *::before, *::after { box-sizing: border-box; margin: 0; }
 html, body { overflow-x: clip; }
-html { scroll-behavior: smooth; }
 body {
   background: var(--color-paper);
   color: var(--color-ink);
@@ -166,19 +165,37 @@ h2, h3, h4 {
 
 /* ———— шапка и футер ———— */
 .site-head {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
   display: flex;
+  /* переносится: при 200% ни счётчик, ни указатель в строку не влезают,
+     а глобальный overflow-x: clip обрезал бы их молча */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-md);
-  padding: var(--space-lg) 12rem var(--space-md) var(--pad-x);
+  gap: var(--space-2xs) var(--space-md);
+  padding: var(--space-sm) 12rem var(--space-sm) var(--pad-x);
+  background: var(--color-scrim-strong);
+  backdrop-filter: blur(8px);
 }
+/* где читатель сейчас: номер записи из общего числа и её название. Текст ставит app.js
+   из того же наблюдателя, что подсвечивает карточку на полке */
+.site-head__now {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-muted);
+}
+.site-head__now:empty { display: none; }
 .wordmark {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: var(--text-md);
   white-space: nowrap;
 }
-.site-head .mono { white-space: nowrap; }
 .site-foot {
   padding: var(--space-2xl) var(--pad-x);
   border-top: 1px solid var(--color-rule);
@@ -265,7 +282,7 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   white-space: nowrap;
   vertical-align: middle;
 }
-.chip svg, .chip .share svg { width: 13px; height: 13px; opacity: 0.75; }
+.chip svg { width: 13px; height: 13px; opacity: 0.75; }
 /* оценка чипом — только для узкого экрана, на широком её место занимает медаль */
 .chip--score { display: none; }
 .chip--score .of { font-size: 0.62rem; letter-spacing: 0.08em; color: var(--color-neutral); }
@@ -374,18 +391,24 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
 .score--tbd .n { color: var(--color-neutral); }
 .score--drop .n { font-size: var(--text-md); }
 
+/* область нажатия — не иконка 13×13: кнопка держит 32×32 сама */
 .share {
-  all: unset;
+  font: inherit;
   cursor: pointer;
   color: var(--color-neutral);
-  display: inline-flex;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
 }
 .share .i-check { display: none; }
 .share.ok { color: var(--color-accent); cursor: default; }
 .share.ok .i-share { display: none; }
 .share.ok .i-check { display: inline; }
 .share:hover { color: var(--color-accent); }
-.share:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* неудача копирования — надпись на самой кнопке: у успеха есть галочка, и без парной
+   пометки провал выглядел бы ровно так же, как удача */
+.share.err { color: var(--color-muted); border-color: var(--color-neutral); }
+.share.err::after { content: "не вышло"; font-family: var(--font-mono); font-size: 0.62rem; }
 
 /* плашка магазина: тот же чип, только в цветах Steam и со свечением при наведении */
 .storelink {
@@ -609,6 +632,14 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 /* порядок не по дате — заголовки групп сняты: карточки перемешаны, подпись врала бы */
 .shelf__grid.is-sorted .shelf__head { display: none; }
 .shelf__empty { color: var(--color-muted); margin-bottom: var(--space-md); }
+/* стена постеров в хвосте ленты: узел .shelf__list общий с полкой — app.js переносит
+   его в диалог на время открытия и возвращает сюда. Второй разметки нет */
+.wall { padding: var(--space-2xl) var(--pad-x); }
+.wall__h { font-size: var(--text-md); color: var(--color-muted); margin-bottom: var(--space-md); }
+.wall .shelf__grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+/* в хвосте это стена, а не оглавление: на широком экране заголовки месяцев рвут её
+   на строки по одной-две обложки. Группы остаются в полке, где сетка узкая */
+.wall .shelf__head { display: none; }
 /* кандидат под Enter: гало другого тона, чтобы не путалось с акцентной рамкой скролл-спая */
 .shelf__grid a.is-hit {
   border-color: var(--color-accent);
@@ -748,10 +779,10 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
 /* узкий экран. Брейкпоинт дублируется в NARROW в scripts/build.mjs (<source media>) —
    менять обязательно парой, иначе постер и мобильная вёрстка включатся на разной ширине */
 @media (max-width: 48rem) {
-  .site-head { padding-inline-end: var(--pad-x); }
+  .site-head { padding-inline-end: var(--pad-x); background: var(--color-scrim-solid); }
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
   .glass.note { padding-top: var(--space-md); }
-  .shelf-btn, .shelf, .reveal::after { backdrop-filter: none; }
+  .shelf-btn, .shelf, .reveal::after, .site-head { backdrop-filter: none; }
   /* без блюра полупрозрачная кнопка пропускает текст, который под ней проезжает:
      на мобилке фон сплошной, а тень отделяет плашку от полотна записи */
   .shelf-btn, .top-btn {
@@ -860,11 +891,10 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
 /* ———— reduced motion ———— */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 150ms !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 150ms !important;
+    transition-duration: 0.01ms !important;
   }
-  html { scroll-behavior: auto; }
   /* кнопки не едут, а гаснут: пространственное движение здесь необязательное */
   .fabs-away .shelf-btn, .fabs-away .top-btn { transform: none; }
 }

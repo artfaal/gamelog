@@ -284,9 +284,7 @@ const metaLine = e => {
   // есть appid — даём читателю прямой путь на страницу игры в магазине
   if (e.fm.steam) parts.push(`<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
         aria-label="Открыть ${esc(e.name)} в Steam — новая вкладка" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`);
-  parts.push(`<span class="chip chip--btn"><button type="button" class="share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой" title="Поделиться ссылкой">
-    ${I_SHARE}${I_CHECK}
-  </button></span>`);
+  parts.push(`<button type="button" class="chip chip--btn share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой" title="Поделиться ссылкой">${I_SHARE}${I_CHECK}</button>`);
   // пробел между чипами — не для вида (зазор даёт margin), а чтобы копирование
   // строки мышью не склеивало значения: «1 июня 202647 часов»
   return parts.join(" ");
@@ -504,12 +502,21 @@ ${preloadLcp}
 <body id="top">
 <header class="site-head">
   <h1 class="wordmark">Хроника</h1>
-  <span class="mono">${ruGames(games)} · ${ruHours(hours)}</span>
+  <span class="mono site-head__now" id="head-now"></span>
+  <span class="mono site-head__sum">${ruGames(games)} · ${ruHours(hours)}</span>
 </header>
 <button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
 <button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="fab-label"> наверх</span></button>
 <span class="sr-only" id="say" role="status"></span>
-<main>${entries.map(entryHtml).join("")}</main>
+<main>${entries.map(entryHtml).join("")}
+<section class="wall" id="wall" aria-labelledby="wall-h">
+  <h2 class="wall__h" id="wall-h">Вся полка</h2>
+  <nav class="shelf__list" id="shelf-list" aria-label="Игры">
+    <p class="shelf__empty" id="shelf-empty" hidden>Ничего не нашлось.
+      <button type="button" class="chip chip--filter chip--reset mono" id="shelf-empty-reset">сбросить поиск и фильтры</button></p>
+    <div class="shelf__grid" id="shelf-grid">${shelfHtml}</div>
+  </nav>
+</section></main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>
   <span class="mono">Обложки и кадры — Steam · <a href="https://artfaal.ru">artfaal</a></span>
@@ -533,16 +540,11 @@ ${preloadLcp}
     <summary class="shelf__fsum mono">фильтр<span id="shelf-fcount"></span></summary>${filtersHtml}
     <div class="shelf__row"><button type="button" class="chip chip--filter chip--reset mono" id="shelf-reset" aria-label="Сбросить поиск и фильтры" hidden>сбросить</button></div>
   </details>
-  <nav class="shelf__list" id="shelf-list" aria-label="Игры">
-    <p class="shelf__empty" id="shelf-empty" hidden>Ничего не нашлось.
-      <button type="button" class="chip chip--filter chip--reset mono" id="shelf-empty-reset">сбросить поиск и фильтры</button></p>
-    <div class="shelf__grid" id="shelf-grid">${shelfHtml}</div>
-  </nav>
 </dialog>
 <dialog class="lb" id="lb" aria-label="Кадры и видео записи">
   <button class="x" id="lb-x" aria-label="Закрыть кадры">${I_CLOSE}</button>
   <div class="lb__stage" id="lb-stage" tabindex="-1" autofocus></div>
-  <p class="cap"><span class="mono" id="lb-cap"></span><span class="mono lb__count" id="lb-count"></span></p>
+  <p class="cap" role="status"><span class="mono" id="lb-cap"></span><span class="mono lb__count" id="lb-count"></span></p>
   <button class="lb__nav lb__nav--prev" id="lb-prev" aria-label="Предыдущий кадр">${I_PREV}</button>
   <button class="lb__nav lb__nav--next" id="lb-next" aria-label="Следующий кадр">${I_NEXT}</button>
 </dialog>
