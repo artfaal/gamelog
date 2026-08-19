@@ -444,7 +444,25 @@ lb.addEventListener("close", () => {
   const idle = typeof requestIdleCallback === "function" ? requestIdleCallback : cb => setTimeout(cb, 2000);
   const warmShelf = () => idle(() =>
     document.querySelectorAll("#shelf-list img[loading]").forEach(img => { img.loading = "eager"; }));
-  if (!saveData) addEventListener("scroll", warmShelf, { once: true, passive: true });
+
+  // обои следующей записи: запись вне экрана не раскладывается (content-visibility: auto),
+  // а нативный loading="lazy" будит её арт у самой кромки вьюпорта — и на стыке читатель
+  // видел пустое полотно вместо кадра. Будим за запись вперёд и тем же приёмом, что полку:
+  // сменой атрибута. <link rel="preload"> тянул бы арт немедленно и мимо всех гейтов —
+  // ровно тот дефект, который лечила волна 1, снимая жадный poster= у <video>.
+  // Наблюдаем запись, а будим соседнюю: считать расстояние до внеэкранной записи нечем —
+  // её содержимое не разложено, и наблюдатель на самой картинке не сработал бы
+  const bgs = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    bgs.unobserve(e.target);
+    const img = e.target.nextElementSibling?.querySelector?.("img.bg[loading]");
+    if (img) img.loading = "eager";
+  }), { rootMargin: "100% 0px" });
+  const warmBg = () => document.querySelectorAll("article.stage").forEach(a => bgs.observe(a));
+
+  // один гейт на оба пробуждения: не под «экономией трафика» и не раньше первого движения
+  // по ленте — на первом экране эти мегабайты отнимают канал у того, что уже на экране
+  if (!saveData) addEventListener("scroll", () => { warmBg(); warmShelf(); }, { once: true, passive: true });
 }
 
 // — «наверх»: появляется, когда читатель отъехал от начала. По глубине прокрутки,

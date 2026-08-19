@@ -208,6 +208,7 @@ h2, h3, h4 {
   padding: var(--space-sm) 12rem var(--space-sm) var(--pad-x);
   background: var(--color-scrim-strong);
   backdrop-filter: blur(8px);
+  transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
 }
 /* где читатель сейчас: номер записи из общего числа и её название. Текст ставит app.js
    из того же наблюдателя, что подсвечивает карточку на полке */
@@ -220,6 +221,10 @@ h2, h3, h4 {
   color: var(--color-muted);
 }
 .site-head__now:empty { display: none; }
+/* шапка не накрывает верх постера: пока читатель едет вниз, она уезжает вместе с
+   кнопками-таблетками (класс fabs-away ставит app.js), а на первом движении вверх
+   возвращается — вместе с указателем «где я сейчас», который тогда и нужен */
+.fabs-away .site-head { opacity: 0; transform: translateY(-100%); pointer-events: none; }
 .wordmark {
   font-family: var(--font-display);
   font-weight: 700;
@@ -241,6 +246,8 @@ h2, h3, h4 {
 }
 .site-foot .mono { margin-top: var(--space-md); display: block; }
 .site-foot a:hover { color: var(--color-accent); }
+/* пиктограмма подписи — в кегль строки: у инлайнового svg без width/height свой размер по умолчанию */
+.site-foot a svg { width: 0.85em; height: 0.85em; margin-inline-end: 0.3em; vertical-align: -0.08em; }
 
 /* ———— запись: sticky-обои + панели по центру ———— */
 /* запись вне экрана не рисуется: каждая — прилипший полноэкранный арт и панели с
@@ -251,15 +258,13 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
 /* --focus (задаёт focus: во фронтматтере) — смысловой центр обоев по горизонтали:
    кроп широкого hero под экран съедает бока, и середина файла редко совпадает с сюжетом */
 .hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50%) center; }
-/* стык записей: хвост уезжающей дотаивает в цвет страницы, верх приезжающей из него всплывает —
-   на шве встречаются два фона, а не резаная кромка. Верхний слой — общий скрим под панели */
+/* общий скрим под панели, растворения шва здесь нет:
+   шов намеренно разный по ширинам — на широком экране арт занимает кадр целиком,
+   и резаная кромка читается как разделитель записей */
 .hero::after {
   content: "";
   position: absolute; inset: 0;
-  background:
-    linear-gradient(to bottom, var(--color-paper) 20px, transparent 130px),
-    linear-gradient(to top, var(--color-paper) 40px, transparent 320px),
-    linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
+  background: linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
 }
 .hero .logo, .hero .logo-text {
   position: absolute;
@@ -268,7 +273,7 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   bottom: clamp(5rem, 20svh, 12rem);
   z-index: var(--z-raised);
 }
-.hero .logo { max-height: 88px; max-width: min(60vw, 360px); width: auto; object-fit: contain; filter: drop-shadow(0 2px 20px var(--color-scrim)); }
+.hero .logo { max-height: 112px; max-width: min(60vw, 360px); width: auto; object-fit: contain; filter: drop-shadow(0 2px 20px var(--color-scrim)); }
 /* логотип игры нарисован тёмным (logo: dark во фронтматтере): общая тёмная тень
    на светлом арте его не отделяет, а сливает с фоном. Светлая тень двумя слоями —
    плотный ореол по контуру и мягкий разлёт */
@@ -832,7 +837,6 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
 @media (max-width: 48rem) {
   .site-head { padding-inline-end: var(--pad-x); background: var(--color-scrim-solid); }
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
-  .glass.note { padding-top: var(--space-md); }
   .shelf-btn, .shelf, .reveal::after, .site-head { backdrop-filter: none; }
   /* без блюра полупрозрачная кнопка пропускает текст, который под ней проезжает:
      на мобилке фон сплошной, а тень отделяет плашку от полотна записи */
@@ -840,9 +844,6 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
     background: var(--color-scrim-solid);
     box-shadow: 0 4px 18px var(--color-scrim);
   }
-  .glass .meta::before { display: none; }   /* медаль ушла в поток — место резервировать не от чего */
-  /* на узком экране медаль не свисает с кромки, а встаёт в поток над метой.
-     relative, а не static: сердцевина ::before держится за саму медаль, иначе растекается на панель */
   /* медаль на кромку не помещается: гасим её визуально, но оставляем в потоке —
      внутри лежит подпись для скринридера, а видимую роль берёт .chip--score */
   .score {
@@ -905,6 +906,16 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
       transparent calc(var(--bleed) + var(--poster-h) - 62px),
       #000 calc(var(--bleed) + var(--poster-h) + 56px));
   }
+  /* стык записей: хвост уезжающей дотаивает в цвет страницы, верх приезжающей из него
+     всплывает — иначе новый постер въезжает в размытый хвост предыдущего резаным краем.
+     Растворение живёт только здесь: шов намеренно разный по ширинам, на телефоне постер
+     до низа экрана не достаёт, и полосу под ним всё равно приходится растворять */
+  .hero::after {
+    background:
+      linear-gradient(to bottom, var(--color-paper) 20px, transparent 130px),
+      linear-gradient(to top, var(--color-paper) 40px, transparent 320px),
+      linear-gradient(to top, var(--color-scrim-mid), var(--color-scrim-0) 55%);
+  }
   .body { margin-top: -10svh; }
   /* постер прижат к верху, вся размытая полоса собрана внизу — панель начинается
      ровно на ней: низ постера при ширине экрана = 150vw (2:3). min() возвращает
@@ -941,4 +952,5 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   dialog::backdrop { transition-duration: 0.01ms !important; }
   /* кнопки не едут, а гаснут: пространственное движение здесь необязательное */
   .fabs-away .shelf-btn, .fabs-away .top-btn { transform: none; }
+  .fabs-away .site-head { transform: none; }
 }

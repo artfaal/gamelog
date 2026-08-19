@@ -111,6 +111,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   if (fm.focus != null && !(Number.isFinite(fm.focus) && fm.focus >= 0 && fm.focus <= 100))
     fail(`focus — число 0–100, процент по горизонтали: ${fm.focus}`);
   if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail("нужен verdict — одна строка вердикта");
+  // name необязателен (имя приезжает из кэша Steam), но пустая строка побеждает фолбэк
+  // fm.name ?? steam?.name ?? slug и протекает пустотой в заголовок, alt, title и фид
+  if (fm.name !== undefined && (typeof fm.name !== "string" || !fm.name.trim()))
+    fail("пустой name — либо строка с именем, либо поля нет");
   if (fm.genres != null && !(Array.isArray(fm.genres) && fm.genres.every(g => typeof g === "string" && g.trim())))
     fail(`genres должен быть списком строк: ${fm.genres}`);
 
@@ -267,6 +271,7 @@ const I_CHECK = icon('<polyline points="20 6 9 17 4 12"/>', "i-check");
 const I_CAL = icon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>');
 const I_CLOCK = icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
 const I_PLAY = icon('<polygon points="6 4 20 12 6 20 6 4"/>');
+const I_RSS = icon('<path d="M5 18h.01"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/>');
 const I_PAUSE = icon('<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>');
 // логотип Steam — simple-icons (CC0)
 const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>`;
@@ -282,38 +287,6 @@ const scoreChip = e => {
   return `<span class="chip chip--score${dim ? " is-dim" : ""}" aria-hidden="true">${body}</span>`;
 };
 
-// дата выхода игры: Steam отдаёт её строкой своего формата («Aug 6, 2018»), кэш кладёт
-// как есть, разбираем здесь. Год виден всегда, разрыв с датой прохождения — когда обе даты
-// полные: половина записей — игры старше захода на годы, и вердикты это проговаривают руками.
-// Кэш без поля (записан раньше него) и не-Steam запись чипа просто не получают.
-const RELEASED = /^[A-Za-z]{3,9} \d{1,2}, \d{4}$/;
-const releaseChip = e => {
-  const raw = String(e.steam?.released ?? "").trim();
-  const year = /\d{4}/.exec(raw)?.[0];
-  if (!year) return null;
-  const from = RELEASED.test(raw) ? Date.parse(`${raw} UTC`) : NaN;
-  // год из будущего — не выход, а планы Steam на игру («Q1 2027»): «вышла в 2027» дневник
-  // не говорит. Свежий кэш такого и не приносит, но старый и правленый руками — приносит.
-  // План текущего года («Q1 2026») от факта одним годом не отличить — в этом году чипу
-  // нужна полная дата, к тому же прошедшая
-  const thisYear = new Date().getUTCFullYear();
-  if (Number(year) > thisYear || (Number(year) === thisYear && !(from <= Date.now()))) return null;
-  const days = Number.isFinite(from) && e.fm.finished !== TBD
-    ? Math.floor((Date.parse(`${e.fm.finished}T00:00:00Z`) - from) / 86400000)
-    : null;
-  // разрыв мельче года меряем месяцами, мельче месяца — днями: «через 0 лет» — не разрыв,
-  // а нелепость. Года округляем вниз: 7,8 года — это «через 7 лет», а не «через 8».
-  // Год = 365 дней, месяц = 30: делители ровные, иначе между ними остаётся щель,
-  // в которой 365 дней превращаются в «11 месяцев»
-  const years = days == null ? 0 : Math.floor(days / 365);
-  const months = days == null ? 0 : Math.floor(days / 30);
-  const gap = days == null || days < 1 ? ""
-    : years >= 1 ? plural(years, "год", "года", "лет")
-    : months >= 1 ? plural(months, "месяц", "месяца", "месяцев")
-    : plural(days, "день", "дня", "дней");
-  return `<span class="chip chip--rel">вышла в ${year}${gap ? ` · через ${gap}` : ""}</span>`;
-};
-
 const metaLine = e => {
   const parts = [scoreChip(e), e.playing
     ? `<span class="chip chip--flag">${I_PLAY}сейчас играю</span>`
@@ -322,8 +295,6 @@ const metaLine = e => {
   if (e.paused) parts.push(`<span class="chip chip--flag">${I_PAUSE}отложил</span>`);
   // hours: tbd — часов просто нет в строке, выдумывать нечего
   if (e.fm.hours !== TBD) parts.push(`<span class="chip chip--hours">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
-  const rel = releaseChip(e);
-  if (rel) parts.push(rel);
   if (e.fm.platform) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
     const year = String(s.fm.finished).slice(0, 4);
@@ -602,7 +573,8 @@ ${preloadLcp}
 </section></main>
 <footer class="site-foot">
   <p>Игры заканчиваются. Воспоминания — нет.</p>
-  <span class="mono">Обложки и кадры — Steam · <a href="https://artfaal.ru">artfaal</a></span>
+  <span class="mono">Обложки и кадры — Steam · <a href="https://artfaal.ru">artfaal</a>
+    · <a href="/feed.xml" title="Читать дневник в читалке">${I_RSS}<span>RSS</span></a></span>
 </footer>
 <dialog class="shelf" id="shelf" tabindex="-1" aria-labelledby="shelf-title">
   <button class="x" id="shelf-x" aria-label="Закрыть полку">${I_CLOSE}</button>
