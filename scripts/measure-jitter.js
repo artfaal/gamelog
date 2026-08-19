@@ -1,29 +1,76 @@
-// Замер дёрганья ленты при чтении снизу вверх — тот сценарий, из-за которого
-// появилась заглушка --h (см. README, «Записи вне экрана»). Скрипт для консоли
-// браузера, а не для node: высоту записи знает только раскладка.
+// Замер ленты: насколько врут заглушки высоты (--h) и сильно ли дёргает при чтении
+// снизу вверх — тот сценарий, из-за которого заглушка появилась (см. README).
+// Скрипт для консоли браузера, а не для node: высоту записи знает только раскладка.
 //
 //   1. make serve  (или открой https://games.artfaal.ru)
-//   2. поставь узкий экран — на телефоне дефект виден, на широком слабее
-//   3. вставь этот файл целиком в консоль и дождись цифр
+//   2. поставь нужную ширину — на телефоне дефект виден, на широком слабее
+//   3. вставь файл целиком в консоль
 //
-// Меряется изменение высоты документа: запись, материализуясь ВЫШЕ вьюпорта,
-// двигает всё, что ниже, и читатель видит рывок. Цифры из README сняты так же —
-// на 390×844 и 1440×900, шаг прокрутки 600 и 700 px соответственно.
+// Два замера идут отдельно и в таком порядке не случайно:
+//   heights() снимает ПРАВДУ — временно показывает все записи, чтобы у непосещённых
+//     тоже была настоящая высота, а не заглушка: иначе промах у них выйдет нулевым;
+//   jitter() меряет дефект и потому требует свежей загрузки — `auto` в
+//     contain-intrinsic-size запоминает настоящую высоту, и второй проход по той же
+//     ленте идёт уже без единого сдвига.
 
-(async () => {
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const step = window.innerWidth < 768 ? 600 : 700;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // залетаем в конец ленты: так ни одна запись выше ещё не рисовалась —
-  // худший случай, он же и есть жалоба
+// раскладка устаканилась: шрифты приехали, уже начатые картинки декодированы, кадр
+// отрисован. Ждём только те, что реально грузятся: decode() у lazy-картинки, до которой
+// читатель не доехал, не разрешится никогда — она даже не начинала качаться
+async function settled() {
+  const limit = new Promise(r => setTimeout(r, 3000));
+  await Promise.race([document.fonts.ready, limit]);
+  const started = [...document.images].filter(i => i.currentSrc && i.complete);
+  await Promise.race([Promise.all(started.map(i => i.decode().catch(() => {}))), limit]);
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
+
+// правда о высотах: чему они равны, когда запись действительно разложена
+async function heights() {
+  const off = document.createElement("style");
+  off.textContent = "article.stage { content-visibility: visible !important; }";
+  document.head.appendChild(off);
+  await settled();
+  await sleep(400);
+
+  const vh = window.innerHeight;
+  const rows = [...document.querySelectorAll("article.stage")].map(a => {
+    const declared = Number(a.style.getPropertyValue("--h")) || 250;
+    const real = Math.round(a.getBoundingClientRect().height / vh * 100);
+    return { запись: a.id, заглушка: declared, реально: real, промах: declared - real, промах250: 250 - real };
+  });
+  off.remove();
+
+  const sum = k => rows.reduce((s, r) => s + Math.abs(r[k]), 0);
+  const worst = k => Math.max(...rows.map(r => Math.abs(r[k])));
+  return {
+    строки: rows,
+    формула: { сумма_промахов_svh: sum("промах"), худший_промах_svh: worst("промах") },
+    общая_заглушка_250: { сумма_промахов_svh: sum("промах250"), худший_промах_svh: worst("промах250") },
+  };
+}
+
+// дефект: запись, материализуясь выше вьюпорта, двигает всё, что ниже
+async function jitter() {
+  await settled();
   window.scrollTo(0, document.documentElement.scrollHeight);
   await sleep(1200);
 
+  const step = window.innerWidth < 768 ? 600 : 700;
   let prev = document.documentElement.scrollHeight;
-  let jumps = 0, sum = 0, worst = 0;
-  for (let i = 0; i < 30; i++) {
+  let jumps = 0, sum = 0, worst = 0, guard = 0;
+  // до самого верха, а не фиксированным числом шагов: лента длиннее, чем кажется,
+  // и на 30 шагах верхняя половина просто не посещается
+  let stuck = 0;
+  while (window.scrollY > 0 && guard++ < 500) {
+    const before = window.scrollY;
     window.scrollBy(0, -step);
     await sleep(120);
+    // шаг вверх не продвинул — это и есть дефект в чистом виде: лента доросла ровно
+    // настолько, насколько мы поднялись. Выходим только если так несколько раз подряд
+    stuck = window.scrollY >= before ? stuck + 1 : 0;
+    if (stuck >= 3) break;
     const h = document.documentElement.scrollHeight;
     if (h !== prev) {
       jumps++;
@@ -32,21 +79,14 @@
       prev = h;
     }
   }
+  return { шагов: guard, скачков: jumps, суммарно_px: sum, худший_рывок_px: worst };
+}
 
-  // насколько заглушка разошлась с правдой — та же величина, но по записям
-  const vh = window.innerHeight;
-  const miss = [...document.querySelectorAll("article.stage")].map(a => {
-    const declared = Number(a.style.getPropertyValue("--h")) || 250;
-    const real = Math.round(a.getBoundingClientRect().height / vh * 100);
-    return { запись: a.id, заглушка: declared, реально: real, промах: declared - real };
-  });
-
-  console.table(miss);
-  console.log({
-    экран: `${window.innerWidth}×${vh}`,
-    скачков: jumps,
-    суммарно_px: sum,
-    худший_рывок_px: worst,
-    худший_промах_svh: Math.max(...miss.map(m => Math.abs(m.промах))),
-  });
+(async () => {
+  const экран = `${window.innerWidth}×${window.innerHeight}`;
+  // сначала дефект (нужна нетронутая лента), потом правда о высотах
+  const дефект = await jitter();
+  const правда = await heights();
+  console.table(правда.строки);
+  console.log({ экран, дёрганье: дефект, промахи: { формула: правда.формула, было_бы_с_общей_250: правда.общая_заглушка_250 } });
 })();

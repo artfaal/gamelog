@@ -299,7 +299,7 @@ document.addEventListener("click", e => {
     fig.querySelectorAll("[inert]").forEach(el => el.removeAttribute("inert"));
     reveal.remove();
     const vid = fig.querySelector("video");
-    if (vid && !reduceMotion.matches) vid.play().catch(() => {});   // раскрыли момент — видео идёт
+    if (vid && autoplay) vid.play().catch(() => {});   // раскрыли момент — видео идёт (но не под «экономией трафика»)
     const target = vid ?? fig.querySelector(".shotbtn") ?? fig.querySelector("figcaption");
     if (target.tabIndex < 0) target.tabIndex = -1;
     target.focus();
@@ -345,11 +345,23 @@ const lbShow = () => {
   if (src.dataset.src && !src.getAttribute("src")) src.src = src.dataset.src;
   const cap = src.alt || src.getAttribute("aria-label") || "";
   const node = document.createElement(src.tagName === "VIDEO" ? "video" : "img");
+  // размеры переносим с оригинала: без них узел встаёт дефолтными 300×150 и прыгает,
+  // когда приедут метаданные или картинка
+  if (src.naturalWidth || src.videoWidth) {
+    node.width = src.naturalWidth || src.videoWidth;
+    node.height = src.naturalHeight || src.videoHeight;
+  } else if (src.getAttribute("width")) {
+    node.width = src.getAttribute("width");
+    node.height = src.getAttribute("height");
+  }
   node.src = src.src;
-  if (node.tagName === "VIDEO") node.controls = node.loop = node.playsInline = true;
-  else node.alt = cap;
+  if (node.tagName === "VIDEO") {
+    node.controls = node.loop = node.playsInline = true;
+    // под «экономией трафика» ролик ждёт руки читателя, как и в ленте
+    node.preload = autoplay ? "metadata" : "none";
+  } else node.alt = cap;
   lbStage.replaceChildren(node);
-  if (node.tagName === "VIDEO" && !reduceMotion.matches) node.play().catch(() => {});
+  if (node.tagName === "VIDEO" && autoplay) node.play().catch(() => {});
   lbCap.textContent = cap;
   lbCount.textContent = reel.length > 1 ? `${pos + 1} из ${reel.length}` : "";
   lbPrev.hidden = lbNext.hidden = reel.length < 2;

@@ -820,7 +820,7 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 /* сцена ловит фокус при открытии (чтобы не подсвечивался крестик) — рамка ей не нужна */
 .lb__stage { display: grid; place-items: center; }
 .lb__stage:focus, .lb__stage:focus-visible { outline: none; }
-.lb__stage img, .lb__stage video { max-width: 100%; max-height: 84dvh; width: auto; }
+.lb__stage img, .lb__stage video { max-width: 100%; max-height: 84dvh; width: auto; height: auto; }
 .lb .cap { margin-top: var(--space-sm); display: flex; justify-content: space-between; gap: var(--space-md); }
 .lb__count { white-space: nowrap; }
 /* края кадра — зоны перелистывания: стрелка проявляется на наведении, с клавиатуры — по фокусу */
@@ -1001,7 +1001,9 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .shelf__filters { max-height: 34dvh; overflow-y: auto; overscroll-behavior: contain; margin-bottom: 0; }
   /* уезжают, пока читатель едет вниз (класс ставит app.js), возвращаются на движении вверх */
   .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
-  .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }
+  /* visibility, а не только opacity: иначе уехавшая кнопка остаётся в порядке
+     табуляции и фокус с клавиатуры уходит на то, чего не видно */
+  .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; visibility: hidden; }
   .shelf-btn .fab-label, .top-btn .fab-label { display: none; }
   .top-btn { bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
 }

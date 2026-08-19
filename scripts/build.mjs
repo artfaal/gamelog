@@ -124,6 +124,17 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     else fail(`нет cache/${fm.steam}.json — запусти: node scripts/new.mjs ${fm.steam}`);
   } else if (!fm.hero) fail("нужно поле steam: <appid> — или hero: media/…");
 
+  // расширение решает, чем медиа станет в разметке: клип — <video>, кадр — <img>.
+  // Без проверки clip: media/foo.jpg молча уезжал в <video>, а mp4 в shots — в <img>,
+  // и сборка оставалась зелёной
+  const VIDEO_EXT = /\.(mp4|webm|mov)$/i;
+  const mediaKind = (ref, kind) => {
+    if (typeof ref !== "string" || !ref.startsWith("media/")) return;
+    const video = VIDEO_EXT.test(ref);
+    if (kind === "clip" && !video) fail(`clip должен быть видео, а не картинкой: ${ref}`);
+    if (kind === "shot" && video) fail(`кадр в shots должен быть картинкой, а не видео: ${ref}`);
+  };
+
   const media = p => {
     if (typeof p === "number") {
       if (!steam || !(p in steam.shots)) { fail(`нет магазинного скрина №${p}`); return null; }
@@ -136,6 +147,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       { fail(`нет файла content/${ref}`); return null; }
     return ref;
   };
+
+  mediaKind(fm.clip, "clip");
+  if (Array.isArray(fm.shots)) fm.shots.forEach(r => mediaKind(r, "shot"));
 
   // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref) / текст)
   const parts = body.split(/^## Моменты\s*$/m);
@@ -337,15 +351,45 @@ const dataPoster = url => url ? ` data-poster='${esc(url).replace(/'/g, "%27")}'
 const stageVars = e => ` style="--h:${Math.round(
   173 + 0.0859 * (e.textChars ?? 0) + 35 * e.moments.filter(m => m.shot).length + (e.clip ? 45 : 0),
 )}"`;
+// размеры картинки из её заголовка: у jpeg — рамка SOF, у png — IHDR. Свои двадцать
+// строк вместо зависимости: сборке нужны только ширина и высота
+const mediaSize = file => {
+  let buf;
+  try { buf = readFileSync(file); } catch { return null; }
+  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47)
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  if (buf.length < 4 || buf.readUInt16BE(0) !== 0xffd8) return null;
+  for (let i = 2; i + 9 < buf.length;) {
+    if (buf[i] !== 0xff) { i++; continue; }
+    const marker = buf[i + 1];
+    // SOF0…SOF15 несут размеры кадра; C4/C8/CC — таблицы, не рамка
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker))
+      return { w: buf.readUInt16BE(i + 7), h: buf.readUInt16BE(i + 5) };
+    if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; }
+    i += 2 + buf.readUInt16BE(i + 2);
+  }
+  return null;
+};
+
+// размеры кадра в разметку: место под него резервируется до загрузки. У магазинных
+// кадров Steam это всегда 1920×1080, свои же бывают узкими кропами (README, «Кадры»),
+// и подставлять им 1920×1080 значит обещать браузеру не ту высоту
+const shotSize = src => {
+  const size = /^media\//.test(src) ? mediaSize(`content/${src}`) : { w: 1920, h: 1080 };
+  return size ? ` width="${size.w}" height="${size.h}"` : "";
+};
+
 // кадр-заглушку браузер тянет немедленно даже при preload="none" — на первом экране
 // это мегабайты за клипы, до которых читатель ещё не доехал. Ставит его app.js на подходе
 const videoHtml = (src, label, { poster = "", preload = "none", hidden = false } = {}) =>
   `<video class="clip" src="${esc(src)}" muted loop playsinline controls preload="${preload}"${dataPoster(poster)}
       aria-label="Видео: ${esc(label)}"${hidden ? " inert" : ""}></video>`;
 
-// кадр — кнопка: лайтбокс доступен с клавиатуры
-const shotHtml = (src, alt, hidden = false) =>
-  `<button type="button" class="shotbtn"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async" width="1920" height="1080"></button>`;
+// кадр — кнопка: лайтбокс доступен с клавиатуры. Имя нужно самой кнопке: у магазинного
+// кадра alt пустой намеренно (номер и игру говорит счётчик лайтбокса), и без aria-label
+// экранный диктор читал бы ленту безымянных кнопок
+const shotHtml = (src, alt, hidden = false, label = "") =>
+  `<button type="button" class="shotbtn" aria-label="${esc(label || alt || "Открыть кадр")}"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async"${shotSize(src)}></button>`;
 
 const momentMedia = m =>
   !m.shot ? ""
@@ -379,7 +423,7 @@ const entryHtml = (e, i) => {
   const mediaPanel = !e.clip && !e.shots.length ? "" : `
     <div class="glass glass--media">
       ${e.clip ? videoHtml(e.clip, e.name, { poster: e.shots[0] ?? e.hero }) : ""}
-      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(s, "")).join("")}</div>` : ""}
+      ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map((s, n) => shotHtml(s, "", false, `${e.name}, кадр ${n + 1}`)).join("")}</div>` : ""}
     </div>`;
   return `
   <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}${stageVars(e)}>
