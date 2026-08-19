@@ -19,6 +19,12 @@ shelf.addEventListener("click", e => {
 const shelfQ = document.getElementById("shelf-q");
 const shelfCount = document.getElementById("shelf-count");
 const shelfPick = document.getElementById("shelf-pick");
+const shelfBtn = document.getElementById("shelf-btn");
+const shelfGrid = document.getElementById("shelf-grid");
+const shelfEmpty = document.getElementById("shelf-empty");
+const shelfFilters = document.getElementById("shelf-filters");
+const shelfFCount = document.getElementById("shelf-fcount");
+const shelfSort = document.getElementById("shelf-sort");
 const sayBox = document.getElementById("say");                // короткие сообщения скрипта вслух
 const say = msg => { sayBox.textContent = ""; setTimeout(() => sayBox.textContent = msg, 50); };   // кандидат под Enter — вслух, для скринридера
 const shelfItems = [...shelf.querySelectorAll("#shelf-list a")].map(el => ({
@@ -30,7 +36,14 @@ const shelfItems = [...shelf.querySelectorAll("#shelf-list a")].map(el => ({
   hours: el.dataset.hours ? Number(el.dataset.hours) : null,
   genres: el.dataset.genres ? el.dataset.genres.split("|") : [],
   flags: [el.dataset.coop !== undefined ? "coop" : "", el.dataset.moments ? "moments" : ""].filter(Boolean),
+  raw: el.dataset.text ?? "",
 }));
+// заголовок группы и его карточки: заголовок уходит, когда из группы не осталось никого
+const shelfHeads = [...shelfGrid.querySelectorAll(".shelf__head")].map(h => {
+  const items = [];
+  for (let n = h.nextElementSibling; n && !n.classList.contains("shelf__head"); n = n.nextElementSibling) items.push(n);
+  return { h, items };
+});
 let shelfHits = shelfItems, shelfPos = 0;
 
 const fold = s => s.toLowerCase().replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -39,6 +52,7 @@ const RU2EN = { й: "q", ц: "w", у: "e", к: "r", е: "t", н: "y", г: "u", �
   ф: "a", ы: "s", в: "d", а: "f", п: "g", р: "h", о: "j", л: "k", д: "l", ж: ";", э: "'",
   я: "z", ч: "x", с: "c", м: "v", и: "b", т: "n", ь: "m", б: ",", ю: "." };
 const relayout = s => s.replace(/[а-яё]/gi, c => RU2EN[c.toLowerCase()] ?? c);
+shelfItems.forEach(it => { it.text = fold(it.raw); });
 
 // чем раньше совпало, тем выше: начало имени → начало слова → внутри слова → инициалы → слаг
 const rank = (it, q) => {
@@ -48,6 +62,7 @@ const rank = (it, q) => {
   if (hay.includes(q)) return 2;
   if (hay.split(" ").map(w => w[0]).join("").startsWith(flat)) return 1.5;   // sts → Slay the Spire 2
   if (it.slug.replace(/-/g, "").includes(flat)) return 1;                    // atomicheart → atomic-heart
+  if (it.text.includes(q)) return 0.5;                                       // по тексту записи — последним
   return 0;
 };
 
@@ -61,8 +76,9 @@ const shelfPaint = () => {
     it.el.classList.toggle("is-off", !live.has(it));
     it.el.classList.toggle("is-hit", it === hit);
   });
-  shelf.querySelectorAll(".shelf__year").forEach(sec =>
-    sec.classList.toggle("is-off", !sec.querySelector("a:not(.is-off)")));
+  shelfHeads.forEach(g => g.h.classList.toggle("is-off", !g.items.some(a => !a.classList.contains("is-off"))));
+  // пустой результат — не пустой прямоугольник: сообщение и сброс прямо в сетке
+  shelfEmpty.hidden = shelfHits.length > 0;
   shelfCount.textContent = !shelfQ.value.trim() && !shelfPicked().length ? ""
     : shelfHits.length ? `${shelfHits.length} из ${shelfItems.length}` : "ничего не нашлось";
   shelfPick.textContent = hit ? `. Enter откроет ${hit.name}` : "";
@@ -97,49 +113,113 @@ const shelfPicked = () => {
 // считаем тем же chipFits, второй копии порогов не заводим
 shelfChips.forEach(c => { c.hidden = !shelfItems.some(it => chipFits(it, c)); });
 
+// срез фильтра отдаётся ссылкой: #f=score9,hours40. Якорь записи (#hades) остаётся
+// якорем — от среза его отличает префикс «f=», больше hash ни на что не разбирается.
+// Токен собирается из тех же атрибутов, что и фильтр: второй копии порогов нет
+const chipTok = c => `${c.dataset.k}${c.dataset.v ?? ""}${c.dataset.min ?? ""}${c.dataset.max ? `-${c.dataset.max}` : ""}`;
+const shelfHash = () => {
+  const f = shelfChips.filter(c => c.getAttribute("aria-pressed") === "true")
+    .map(c => encodeURIComponent(chipTok(c))).join(",");
+  if (!f && !location.hash.startsWith("#f=")) return;   // чужой якорь записи не трогаем
+  // replaceState, а не hash=: срез — не шаг истории, «назад» должно уводить со страницы
+  history.replaceState(null, "", f ? `#f=${f}` : location.pathname + location.search);
+};
+
 const shelfFind = () => {
   const rows = shelfPicked();
-  shelfReset.hidden = !rows.length;
+  const on = shelfChips.filter(c => c.getAttribute("aria-pressed") === "true").length;
+  const raw = shelfQ.value.trim();
+  shelfReset.hidden = !on && !raw;
+  // включённый фильтр виден снаружи: он переживает закрытие полки, и без метки
+  // читатель возвращается к обрезанной сетке, не понимая почему
+  shelfBtn.classList.toggle("is-on", on > 0);
+  shelfBtn.setAttribute("aria-label", on
+    ? `Полка — поиск и фильтр по играм, фильтров включено: ${on}`
+    : "Полка — поиск и фильтр по играм");
+  shelfFCount.textContent = on ? ` · ${on}` : "";
+  // копия, а не сам shelfItems: порядок ниже сортируется на месте, и без копии
+  // исходный список перемешался бы навсегда — стрелки в поиске ходили бы не по сетке
   const kept = rows.length
     ? shelfItems.filter(it => rows.every(cs => cs.some(c => chipFits(it, c))))
-    : shelfItems;
-  const raw = shelfQ.value.trim();
+    : [...shelfItems];
+  // порядок не по дате: карточки переставляет CSS-свойство order, узлы остаются на месте,
+  // а заголовки групп прячутся — вне хронологии они бы врали
+  const by = shelfSort.value;
+  if (by !== "date") kept.sort((a, b) => (b[by] ?? -1) - (a[by] ?? -1));
+  shelfGrid.classList.toggle("is-sorted", by !== "date");
+  if (by === "date") shelfItems.forEach(it => { it.el.style.order = ""; });
+  else kept.forEach((it, i) => { it.el.style.order = i + 1; });
   const qs = [...new Set([fold(raw), fold(relayout(raw))])].filter(Boolean);
-  // сортировка стабильная — внутри одного ранга порядок остаётся хронологическим
+  // сортировка стабильная — внутри одного ранга порядок остаётся тем же, что в сетке
   shelfHits = raw
     ? kept.map(it => [it, Math.max(...qs.map(q => rank(it, q)))])
       .filter(([, r]) => r > 0).sort((a, b) => b[1] - a[1]).map(([it]) => it)
     : kept;
   shelfPos = 0;
+  shelfHash();
   shelfPaint();
 };
+shelfSort.addEventListener("change", shelfFind);
+
+// сброс — и запрос, и чипы: после пустого результата полка возвращается одним нажатием
+const shelfClear = () => {
+  shelfQ.value = "";
+  shelfChips.forEach(x => x.setAttribute("aria-pressed", "false"));
+  shelfFind();
+};
+document.getElementById("shelf-empty-reset").addEventListener("click", shelfClear);
 
 // набранное сбрасывается на каждом открытии, выбранные чипы — нет:
 // запрос разовый, а фильтр — режим просмотра, в котором читатель остаётся
 const shelfOpen = focus => {
   shelfQ.value = "";
   shelfFind();
+  // свёрнутый фильтр не съедает экран, пока им не пользуются; включённый — раскрыт,
+  // иначе непонятно, почему в сетке четыре игры вместо шестнадцати
+  shelfFilters.open = shelfChips.some(c => c.getAttribute("aria-pressed") === "true");
   shelf.showModal();
+  shelfBtn.setAttribute("aria-expanded", "true");
   // без фокуса поля фокус уехал бы на крестик и мигал кольцом — уводим в сам диалог
   if (focus) shelfQ.focus();
   else shelf.focus();
+  // полка открывается там, где читатель сейчас: активную карточку видно без прокрутки
+  shelfGrid.querySelector("a.on")?.scrollIntoView({ block: "center" });
 };
+shelf.addEventListener("close", () => shelfBtn.setAttribute("aria-expanded", "false"));
 // на телефоне поле не фокусируем — иначе диалог открывается под выехавшей клавиатурой
-document.getElementById("shelf-btn").addEventListener("click", () =>
+shelfBtn.addEventListener("click", () =>
   shelfOpen(matchMedia("(hover: hover) and (pointer: fine)").matches));
+
+// ссылка со срезом, открытая в чистой вкладке, открывает полку тем же срезом
+if (location.hash.startsWith("#f=")) {
+  // битый процент в адресе — не повод уронить весь скрипт вместе с лайтбоксом
+  const dec = t => { try { return decodeURIComponent(t); } catch { return t; } };
+  const toks = new Set(location.hash.slice(3).split(",").map(dec));
+  shelfChips.forEach(c => c.setAttribute("aria-pressed", String(toks.has(chipTok(c)))));
+  shelfOpen(false);
+}
 
 shelf.querySelector(".shelf__filters").addEventListener("click", e => {
   const c = e.target.closest(".chip--filter");
   if (!c) return;
-  if (c === shelfReset) shelfChips.forEach(x => x.setAttribute("aria-pressed", "false"));
-  else c.setAttribute("aria-pressed", String(c.getAttribute("aria-pressed") !== "true"));
+  if (c === shelfReset) { shelfClear(); return; }
+  const was = c.getAttribute("aria-pressed") === "true";
+  // ряд с data-solo — взаимоисключающий: два порога оценки разом всё равно дают нижний
+  if (c.parentElement.hasAttribute("data-solo"))
+    c.parentElement.querySelectorAll(".chip--filter").forEach(x => x.setAttribute("aria-pressed", "false"));
+  c.setAttribute("aria-pressed", String(!was));
   shelfFind();
 });
 
 shelfQ.addEventListener("input", shelfFind);
 shelfQ.addEventListener("keydown", e => {
-  // у type=search первый Esc нативно чистит поле — диалог закрылся бы только со второго
-  if (e.key === "Escape") { e.preventDefault(); shelf.close(); return; }
+  // у type=search первый Esc нативно чистит поле, но не перерисовывает сетку — делаем сами:
+  // набранное Esc снимает, пустое поле закрывает полку
+  if (e.key === "Escape") {
+    e.preventDefault();
+    if (shelfQ.value) { shelfQ.value = ""; shelfFind(); } else shelf.close();
+    return;
+  }
   const hit = shelfHit();
   if (!hit) return;               // нечего выбирать — клавиши работают как в обычном поле
   if (e.key === "Enter") {

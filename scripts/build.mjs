@@ -46,6 +46,15 @@ const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
   '<button type="button" class="spoiler" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
 const mdToHtml = md => marked.parse(spoilers(md));
+// текст записи без разметки и без спойлеров: OG-описание и индекс поиска на полке.
+// Спойлер вычёркивается вместе с содержимым — из-под блюра ничто не находится
+const plain = md => String(md)
+  .replace(/\|\|[^|]+\|\|/g, "")
+  .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+  .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+  .replace(/[*_`#>]/g, "")
+  .replace(/\s+/g, " ")
+  .trim();
 
 // ---------- чтение и валидация записей ----------
 let broken = false;
@@ -117,6 +126,9 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   if (parts.length > 2) fail("секция «## Моменты» должна быть одна");
   const [main, momentsRaw] = parts;
   const moments = [];
+  // корпус для поиска: основной текст + моменты. Момент под спойлером не индексируется
+  // целиком — заголовок у него тоже закрыт блюром
+  const momentText = [];
   if (momentsRaw !== undefined) {
     const chunks = momentsRaw.split(/^### /m);
     if (chunks[0].trim()) fail("текст между «## Моменты» и первым «### » потеряется — убери его");
@@ -133,6 +145,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       });
       if (/!\[[^\]]*\]\(/.test(text)) fail(`в моменте «${title}» больше одной картинки — оставь одну`);
       moments.push({ title, spoiler, shot, alt, html: mdToHtml(text.trim()) });
+      if (!spoiler) momentText.push(title, text.trim());
     }
   }
 
@@ -166,6 +179,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     coop: steam?.coop === true,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
+    indexText: [main.trim(), ...momentText].join(" ").trim(),
     moments,
   });
   if (errs.length) {
@@ -357,11 +371,25 @@ const entryHtml = (e, i) => {
 // постеры lazy: полка спрятана в <dialog>, до её открытия ни один кадр не нужен,
 // а без атрибута вся сетка (десятки постеров) грузилась вместе с лентой. Сетка от
 // этого не поедет: размеры кадра заданы атрибутами, место под него занято сразу
-const byYear = new Map();
+// Группировка по годам осмысленна, когда лет несколько; на молодом дневнике она даёт
+// одну кучу на всю сетку — до порога группируем по месяцам. Условие живёт только здесь
+// и описано в README; закрытый год — любой год, кроме текущего.
+const YEARS_FOR_YEARS = 2;
+const thisYear = new Date().getUTCFullYear();
+const closedYears = new Set(entries.filter(e => !e.playing)
+  .map(e => Number(String(e.fm.finished).slice(0, 4))).filter(y => y < thisYear));
+const byMonth = closedYears.size < YEARS_FOR_YEARS;
+const MONTHS_NOM = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+const groupOf = e => {
+  if (e.playing) return "сейчас играю";
+  const [y, m] = String(e.fm.finished).split("-");
+  return byMonth ? `${MONTHS_NOM[Number(m) - 1]} ${y}` : y;
+};
+const byGroup = new Map();
 entries.forEach((e, i) => {
-  const y = e.playing ? "сейчас играю" : String(e.fm.finished).slice(0, 4);
-  if (!byYear.has(y)) byYear.set(y, []);
-  byYear.get(y).push([e, i]);
+  const g = groupOf(e);
+  if (!byGroup.has(g)) byGroup.set(g, []);
+  byGroup.get(g).push([e, i]);
 });
 // подпись карточки полки: цифры на постере aria-hidden, а без них после фильтра «9+»
 // непонятно, почему запись попала в срез — статус, оценка и часы проговариваются вслух
@@ -379,14 +407,17 @@ const cardData = e => [
   e.genres.length ? `data-genres="${esc(e.genres.join("|"))}"` : "",
   e.coop ? 'data-coop=""' : "",
   e.moments.length ? `data-moments="${e.moments.length}"` : "",
+  // текст записи едет прямо в карточку: корпус — десяток килобайт, отдельный
+  // индекс-файл дороже. Спойлеры вырезаны — inline plain(), моменты под спойлером в indexText
+  `data-text="${esc(plain(e.indexText))}"`,
 ].filter(Boolean).join(" ");
 
 // тег на постере — только глагол: полная форма «сейчас играю» встаёт в две строки
 // и закрывает пол-обложки; контекст даёт заголовок группы над сеткой
-const shelfHtml = [...byYear].map(([y, items]) => `
-  <section class="shelf__year">
-    <h3 class="mono">${y}</h3>
-    <div class="shelf__grid">${items.map(([e, i]) => `
+// сетка — один грид на всю полку, заголовки групп встают в него строкой на всю ширину:
+// сортировка не по дате переставляет карточки свойством order, а не переносом узлов
+const shelfHtml = [...byGroup].map(([g, items]) => `
+    <h3 class="shelf__head mono">${esc(g)}</h3>${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}" ${cardData(e)}
          aria-label="${esc(e.name)} — ${shelfSay(e)}">
         <img src="${esc(e.posterSmall ?? e.hero)}" alt="" loading="lazy" decoding="async" width="600" height="900">
@@ -396,17 +427,18 @@ const shelfHtml = [...byYear].map(([y, items]) => `
           <span>${typeof e.fm.hours === "number" ? `${e.fm.hours} ч` : ""}</span>
         </span>
         ${e.playing ? '<span class="shelf__tag mono">играю</span>' : ""}
-      </a>`).join("")}</div>
-  </section>`).join("");
+      </a>`).join("")}`).join("");
 
 // чипы фильтра: пороги живут здесь и уезжают в разметку атрибутами —
 // app.js их только применяет и второй копии порогов не держит
+// solo — ряд, в котором чипы взаимоисключающие: «9+» и «8+» разом дают просто «8+»,
+// подсвечены при этом оба. Ряды без флага складываются по ИЛИ, как раньше
 const CHIPS = [
   ["оценка", [
     { k: "score", min: 9, lab: "9+" },
     { k: "score", min: 8, lab: "8+" },
     { k: "score", min: 7, lab: "7+" },
-  ]],
+  ], { solo: true }],
   ["статус", [
     { k: "status", v: "done", lab: "пройдено" },
     { k: "status", v: "drop", lab: "дроп" },
@@ -427,12 +459,12 @@ const chipHtml = c => `<button type="button" class="chip chip--filter mono" data
   c.min !== undefined ? ` data-min="${c.min}"` : ""}${
   c.max !== undefined ? ` data-max="${c.max}"` : ""} aria-pressed="false">${esc(c.lab)}</button>`;
 // role=group с подписью: иначе скринридер читает «9+, кнопка» без названия оси
-const chipRow = (label, chips) => chips.length ? `
-  <div class="shelf__row" role="group" aria-label="${esc(label)}"><span class="shelf__rowlab mono" aria-hidden="true">${label}</span>${chips.map(chipHtml).join("")}</div>` : "";
+const chipRow = (label, chips, opts = {}) => chips.length ? `
+  <div class="shelf__row"${opts.solo ? " data-solo" : ""} role="group" aria-label="${esc(label)}"><span class="shelf__rowlab mono" aria-hidden="true">${label}</span>${chips.map(chipHtml).join("")}</div>` : "";
 // жанры не выдумываем: в ряд попадают только те, что реально есть в записях
 const genres = [...new Set(entries.flatMap(e => e.genres))].sort();
 const filtersHtml =
-  CHIPS.map(([label, items]) => chipRow(label, items)).join("") +
+  CHIPS.map(([label, items, opts]) => chipRow(label, items, opts)).join("") +
   chipRow("жанр", genres.map(g => ({ k: "genre", v: g, lab: g })));
 
 // счётчик считает всё подряд: дропы и «сейчас играю» тоже игры, часы — сумма всех заходов
@@ -474,7 +506,7 @@ ${preloadLcp}
   <h1 class="wordmark">Хроника</h1>
   <span class="mono">${ruGames(games)} · ${ruHours(hours)}</span>
 </header>
-<button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
+<button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
 <button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="fab-label"> наверх</span></button>
 <span class="sr-only" id="say" role="status"></span>
 <main>${entries.map(entryHtml).join("")}</main>
@@ -490,12 +522,22 @@ ${preloadLcp}
            placeholder="название игры" aria-label="Найти игру"
            aria-controls="shelf-list" aria-describedby="shelf-hint">
     <span class="sr-only" id="shelf-hint">Enter открывает выбранную игру. Стрелки вверх и вниз перебирают найденное.</span>
+    <select class="shelf__sort mono" id="shelf-sort" aria-label="Порядок">
+      <option value="date">по дате</option>
+      <option value="score">по оценке</option>
+      <option value="hours">по часам</option>
+    </select>
     <span class="shelf__count mono" role="status"><span id="shelf-count"></span><span class="sr-only" id="shelf-pick"></span></span>
   </div>
-  <div class="shelf__filters">${filtersHtml}
-    <div class="shelf__row"><button type="button" class="chip chip--filter chip--reset mono" id="shelf-reset" aria-label="Сбросить фильтры" hidden>сбросить</button></div>
-  </div>
-  <nav class="shelf__list" id="shelf-list" aria-label="Игры по годам">${shelfHtml}</nav>
+  <details class="shelf__filters" id="shelf-filters">
+    <summary class="shelf__fsum mono">фильтр<span id="shelf-fcount"></span></summary>${filtersHtml}
+    <div class="shelf__row"><button type="button" class="chip chip--filter chip--reset mono" id="shelf-reset" aria-label="Сбросить поиск и фильтры" hidden>сбросить</button></div>
+  </details>
+  <nav class="shelf__list" id="shelf-list" aria-label="Игры">
+    <p class="shelf__empty" id="shelf-empty" hidden>Ничего не нашлось.
+      <button type="button" class="chip chip--filter chip--reset mono" id="shelf-empty-reset">сбросить поиск и фильтры</button></p>
+    <div class="shelf__grid" id="shelf-grid">${shelfHtml}</div>
+  </nav>
 </dialog>
 <dialog class="lb" id="lb" aria-label="Кадры и видео записи">
   <button class="x" id="lb-x" aria-label="Закрыть кадры">${I_CLOSE}</button>
@@ -511,14 +553,7 @@ ${preloadLcp}
 
 // описание для OG-карточки: вердикт + начало текста, без спойлеров и разметки
 const ogDesc = e => {
-  const plain = e.rawText
-    .replace(/\|\|[^|]+\|\|/g, "")                     // спойлеры не утекают в превью
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[*_`#>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const full = `${e.fm.verdict} ${plain}`;
+  const full = `${e.fm.verdict} ${plain(e.rawText)}`;
   if (full.length <= 500) return full;
   return full.slice(0, full.lastIndexOf(" ", 500)) + "…";
 };

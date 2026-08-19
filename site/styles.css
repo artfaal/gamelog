@@ -505,6 +505,9 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   white-space: nowrap;
 }
 .shelf-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+/* фильтр включён — видно снаружи, не открывая полку */
+.shelf-btn.is-on { border-color: var(--color-accent); color: var(--color-accent); }
+.shelf-btn.is-on::after { content: " ●"; font-size: 0.7em; vertical-align: 0.15em; }
 .shelf {
   display: flex;
   flex-direction: column;
@@ -519,7 +522,7 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 /* сетка забирает остаток высоты и скроллится сама; шапка окна не ужимается */
 .shelf > :not(.shelf__list) { flex: none; }
 /* basis auto, а не 0: иначе окно не дорастает до max-height и сетке нечего забирать */
-.shelf__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.shelf__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 /* линия отделяет прокручиваемую сетку от шапки — иначе обрез читается как сбой вёрстки */
 .shelf__list { border-top: 1px solid var(--color-rule); padding-top: var(--space-sm); }
 /* сам диалог фокусируем программно (чтобы не мигал крестик) — кольцо ему не нужно */
@@ -543,8 +546,28 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .shelf__q:focus-visible { border-color: var(--color-accent); }
 .shelf__q::-webkit-search-cancel-button { filter: invert(1) opacity(0.5); }
 .shelf__count { white-space: nowrap; }
+.shelf__sort {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-2xs) var(--space-xs);
+}
 /* ———— чипы фильтра: ряд на ось, внутри ряда — ИЛИ ———— */
 .shelf__filters { display: grid; gap: var(--space-2xs); margin-bottom: var(--space-md); }
+/* новые движки заворачивают содержимое details в псевдоэлемент — гриду полки
+   он достаётся одной коробкой, и ряды внутри неё нужно разложить отдельно */
+.shelf__filters::details-content { display: grid; gap: var(--space-2xs); }
+.shelf__fsum {
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: var(--space-2xs) 0;
+}
+.shelf__fsum::marker { color: var(--color-neutral); }
+.shelf__filters[open] .shelf__fsum { color: var(--color-muted); }
 .shelf__row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs); }
 .shelf__rowlab { width: 4rem; flex: none; color: var(--color-neutral); }
 .chip--filter {
@@ -581,20 +604,26 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 }
 .shelf__num .hi { color: var(--color-accent); font-weight: 500; }
 .shelf__num .dim { color: var(--color-neutral); }
-/* фильтр: не совпало — не показываем; год без совпадений уходит целиком */
-.shelf__list a.is-off, .shelf__year.is-off { display: none; }
+/* фильтр: не совпало — не показываем; группа без совпадений уходит с заголовком */
+.shelf__list a.is-off, .shelf__head.is-off { display: none; }
+/* порядок не по дате — заголовки групп сняты: карточки перемешаны, подпись врала бы */
+.shelf__grid.is-sorted .shelf__head { display: none; }
+.shelf__empty { color: var(--color-muted); margin-bottom: var(--space-md); }
 /* кандидат под Enter: гало другого тона, чтобы не путалось с акцентной рамкой скролл-спая */
 .shelf__grid a.is-hit {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px oklch(94% 0.006 80 / 0.35);
 }
-.shelf__year h3 {
+.shelf__head {
+  grid-column: 1 / -1;
   font-family: var(--font-mono);
+  font-size: var(--text-base);
   font-weight: 400;
   color: var(--color-neutral);
   letter-spacing: 0.02em;
-  margin: var(--space-md) 0 var(--space-sm);
+  margin: var(--space-sm) 0 0;
 }
+.shelf__head:first-child { margin-top: 0; }
 .shelf__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
