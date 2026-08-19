@@ -1,7 +1,8 @@
 # gamelog: check — линт; build — прод-сборка; drafts — черновики; serve — просмотр;
 # deploy — на orion; hours — сверка часов со Steam; suggest — кандидаты в дневник;
 # timeline — когда играл, по ачивкам;
-# video/image — проверка клипов и кадров по политике; refresh — что разошлось со Steam
+# video/image — проверка клипов и кадров по политике; jitter — замер дёрганья ленты;
+# refresh — что разошлось со Steam
 DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
 check:
@@ -50,9 +51,15 @@ timeline:
 	@test -n "$(APPID)" || { echo "нужен appid: make timeline APPID=1245620"; exit 1; }
 	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/timeline.mjs $(APPID)
 
+# замер дёрганья ленты и промахов заглушки высоты: печатает скрипт, который надо
+# вставить в консоль браузера на открытой ленте — из node высоту записи не достать
+jitter:
+	@echo "# открой ленту (make serve) и вставь в консоль браузера:"
+	@cat scripts/measure-jitter.js
+
 # что разошлось со Steam по всем кэшам; ничего не пишет.
 # Точечная запись поля — прямым вызовом: node scripts/refresh.mjs <appid> --field genres
 refresh:
 	@node scripts/refresh.mjs --all
 
-.PHONY: check build drafts serve deploy hours suggest timeline video video-fix image refresh
+.PHONY: check build drafts serve deploy hours suggest timeline video video-fix image jitter refresh

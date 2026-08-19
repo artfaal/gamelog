@@ -26,6 +26,8 @@ scripts/steam-owned.mjs ← библиотека Steam одним запросо
 scripts/video.mjs   ← проверка клипов по политике (make video)
 scripts/video-policy.mjs ← пороги политики клипов: один канон для сборки и проверки
 scripts/image.mjs   ← проверка кадров по политике (make image)
+scripts/measure-jitter.js ← замер дёрганья ленты и промахов заглушки высоты (make jitter),
+                      для консоли браузера
 scripts/image-policy.mjs ← пороги политики кадров
 site/               ← styles.css, app.js, favicon.svg и fonts/, копируются в dist как есть
 eslint.config.mjs   ← правила линта; прогнать отдельно — `make check`
@@ -174,15 +176,16 @@ draft: true             # убрать перед публикацией
 | Сдвиг за проход, широкий | 13 302 px | 2419 px |
 | Худший рывок, широкий | 700 px | 288 px |
 
-Замер воспроизводится: `scripts/measure-jitter.js` — вставляется в консоль браузера на
-открытой ленте (высоту записи знает только раскладка, из node её не достать). Левый
+Замер воспроизводится: `make jitter` печатает `scripts/measure-jitter.js`, который
+вставляется в консоль браузера на открытой ленте (высоту записи знает только раскладка, из node её не достать). Левый
 столбец таблицы снят тем же скриптом на сборке начала волны — так его и повторять:
 
 ```bash
 git worktree add /tmp/base 0b1e1f3 && cd /tmp/base
-ln -s ~/PROJECTS/gamelog/node_modules .          # cache и content/ приезжают с коммитом
-cp ~/PROJECTS/gamelog/cache/assets/* cache/assets/ 2>/dev/null   # скачанные ассеты вне git
-cp ~/PROJECTS/gamelog/content/media/*.mp4 content/media/         # клипы тоже вне git
+ln -s ~/PROJECTS/gamelog/node_modules .            # cache/*.json и content/ приезжают с коммитом
+cp -R ~/PROJECTS/gamelog/cache/assets cache/       # ассеты вне git, лежат подкаталогами по appid
+cp ~/PROJECTS/gamelog/content/media/*.mp4 ~/PROJECTS/gamelog/content/media/*.webm \
+   content/media/ 2>/dev/null                      # клипы тоже вне git
 node scripts/build.mjs && (cd dist && python3 -m http.server 8487)
 ```
 
@@ -457,7 +460,7 @@ node scripts/timeline.mjs 1245620
 | кадры | 30 fps | клип — атмосферная вставка, не геймплейный разбор |
 | длительность | 35 с | микротрейлер Steam ~30 с, свои моменты короче |
 | вес | 0,5 МБ/с и не больше 20 МБ | ≈4 Мбит/с — на глаз чисто, мобильный интернет тянет |
-| faststart | обязателен | без него браузер не начинает играть, пока не дотянет файл до конца |
+| faststart | обязателен у mp4 | без него браузер не начинает играть, пока не дотянет файл до конца. У webm свойства нет: это порядок боксов MP4, и проверка его не спрашивает |
 
 Канон пережатия — crf 23 с потолком битрейта: crf сам по себе на боевом 1080p
 вылезает за политику, потолок держит вес, не трогая спокойные сцены.

@@ -4,7 +4,7 @@
 // перекладывает moov в начало файла (--movflags +faststart, поток копируется).
 // Пережатие оставлено человеку: исходник у него, а повторное сжатие уже сжатого
 // съедает картинку. Для нарушителей печатается готовая команда.
-import { readdirSync, statSync, renameSync, existsSync, openSync, readSync, closeSync } from "node:fs";
+import { readdirSync, statSync, renameSync, existsSync, rmSync, openSync, readSync, closeSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { LIMITS } from "./video-policy.mjs";
 
@@ -12,16 +12,29 @@ const FIX = process.argv.includes("--fix");
 const DIR = "content/media";
 if (!existsSync(DIR)) { console.log("нет content/media — клипов нет"); process.exit(0); }
 
+// не читается как видео — это отчёт, а не падение: в content/media может лежать
+// что угодно с расширением клипа, и стектрейс ffprobe про такой файл ничего не говорит
 const probe = file => {
+  let out;
+  try {
+    out = probeRaw(file);
+  } catch {
+    return null;
+  }
+  const [w, h, rate, dur] = out;
+  const [num, den] = rate.split("/").map(Number);
+  return { w: Number(w), h: Number(h), fps: num / (den || 1), sec: Number(dur) };
+};
+
+const probeRaw = file => {
   const out = execFileSync("ffprobe", [
     "-v", "error", "-select_streams", "v:0",
     "-show_entries", "stream=width,height,r_frame_rate",
     "-show_entries", "format=duration",
     "-of", "default=nw=1:nk=1", file,
-  ], { encoding: "utf8" }).trim().split("\n");
-  const [w, h, rate, dur] = out;
-  const [num, den] = rate.split("/").map(Number);
-  return { w: Number(w), h: Number(h), fps: num / (den || 1), sec: Number(dur) };
+  ], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n");
+  if (out.length < 4) throw new Error("ffprobe не отдал размеры");
+  return out;
 };
 // без faststart браузер не начинает играть, пока не дотянет конец файла.
 // Читаем боксы верхнего уровня подряд: moov должен встретиться раньше mdat.
@@ -56,6 +69,7 @@ for (const name of files) {
   const file = `${DIR}/${name}`;
   const mb = statSync(file).size / 1024 / 1024;
   const v = probe(file);
+  if (!v) { console.log(`✗ ${name.padEnd(22)} не читается как видео`); bad++; continue; }
   const perSec = mb / v.sec;
   const gripes = [];
   if (v.w > LIMITS.width || v.h > LIMITS.height) gripes.push(`${v.w}×${v.h} — больше ${LIMITS.width}×${LIMITS.height}`);
@@ -70,11 +84,20 @@ for (const name of files) {
   const mp4 = /\.mp4$/i.test(name);
   let fs = mp4 ? faststart(file) : true;
   if (!fs && FIX) {
-    const tmp = `${file}.faststart.mp4`;
-    execFileSync("ffmpeg", ["-v", "error", "-y", "-i", file, "-c", "copy", "-movflags", "+faststart", tmp]);
-    renameSync(tmp, file);
-    fs = true;
-    fixed++;
+    // временный файл: расширение НЕ клиповое (иначе следующий прогон посчитает огрызок
+    // ещё одним клипом, а «foo.mp4.faststart.mp4» — вполне законное имя чужого файла,
+    // который ffmpeg -y снёс бы молча). Контейнер задаём флагом, а не суффиксом;
+    // занятое имя — отказ, а не перезапись; оборвался ffmpeg — убираем за собой
+    const tmp = `${file}.faststart-${process.pid}.part`;
+    if (existsSync(tmp)) { console.error(`✗ ${name}: ${tmp} уже занят — не трогаю`); continue; }
+    try {
+      execFileSync("ffmpeg", ["-v", "error", "-i", file, "-c", "copy", "-movflags", "+faststart", "-f", "mp4", tmp]);
+      renameSync(tmp, file);
+      fs = true;
+      fixed++;
+    } finally {
+      if (existsSync(tmp)) rmSync(tmp, { force: true });
+    }
   }
   if (!fs) gripes.push("moov в конце — нет faststart");
 
