@@ -307,8 +307,8 @@ const metaLine = e => {
   }
   // есть appid — даём читателю прямой путь на страницу игры в магазине
   if (e.fm.steam) parts.push(`<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
-        aria-label="Открыть ${esc(e.name)} в Steam — новая вкладка" title="Открыть в Steam">${I_STEAM}<span>Steam</span></a>`);
-  parts.push(`<button type="button" class="chip chip--btn share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой" title="Поделиться ссылкой">${I_SHARE}${I_CHECK}</button>`);
+        aria-label="Открыть ${esc(e.name)} в Steam — новая вкладка">${I_STEAM}<span>Steam</span></a>`);
+  parts.push(`<button type="button" class="chip chip--btn share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой">${I_SHARE}${I_CHECK}</button>`);
   // пробел между чипами — не для вида (зазор даёт margin), а чтобы копирование
   // строки мышью не склеивало значения: «1 июня 202647 часов»
   return parts.join(" ");
@@ -460,6 +460,9 @@ const CHIPS = [
     { k: "score", min: 9, lab: "9+" },
     { k: "score", min: 8, lab: "8+" },
     { k: "score", min: 7, lab: "7+" },
+    // четвёртая ступень той же оси, а не отдельный ряд: заход, по которому вердикта ещё нет.
+    // Дроп сюда не попадает — у него оценки нет по устройству, а не «пока»
+    { k: "score", v: "none", lab: "без оценки" },
   ], { solo: true }],
   ["статус", [
     { k: "status", v: "done", lab: "пройдено" },
@@ -477,6 +480,9 @@ const CHIPS = [
     // игре — поддерживает ли она совместную игру. Был ли этот заход совместным, запись не знает
     { k: "flag", v: "coop", lab: "есть кооп" },
     { k: "flag", v: "moments", lab: "с моментами" },
+    // ярлык к хвостам: «отложил ∪ сейчас играю» одним нажатием — ответ на «во что вернуться».
+    // Ряд статуса остаётся точным инструментом, этот чип — короткая дорога поверх него
+    { k: "flag", v: "open", lab: "незакрытое" },
   ]],
 ];
 const chipHtml = c => `<button type="button" class="chip chip--filter mono" data-k="${esc(c.k)}"${
@@ -558,8 +564,8 @@ ${preloadLcp}
   <h1 class="wordmark">Хроника</h1>
   <span class="mono site-head__now" id="head-now"></span>
   <span class="mono site-head__sum">${ruGames(games)} · ${ruHours(hours)}</span>
+  <button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
 </header>
-<button class="shelf-btn" id="shelf-btn" aria-haspopup="dialog" aria-expanded="false" aria-label="Полка — поиск и фильтр по играм">☰<span class="fab-label"> полка</span></button>
 <button class="top-btn" id="top-btn" aria-label="Наверх">↑<span class="fab-label"> наверх</span></button>
 <span class="sr-only" id="say" role="status"></span>
 <main>${entries.map(entryHtml).join("")}

@@ -205,7 +205,10 @@ h2, h3, h4 {
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2xs) var(--space-md);
-  padding: var(--space-sm) 12rem var(--space-sm) var(--pad-x);
+  /* safe-area: кнопка полки уехала в шапку, а он был у неё, не у полосы. Под вырезом
+     и скруглением iPhone в альбомной (viewport-fit=cover) съезжали бы и вордмарк, и ☰ */
+  padding: var(--space-sm) max(var(--pad-x), env(safe-area-inset-right))
+           var(--space-sm) max(var(--pad-x), env(safe-area-inset-left));
   background: var(--color-scrim-strong);
   backdrop-filter: blur(8px);
   transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
@@ -213,7 +216,11 @@ h2, h3, h4 {
 /* где читатель сейчас: номер записи из общего числа и её название. Текст ставит app.js
    из того же наблюдателя, что подсвечивает карточку на полке */
 .site-head__now {
-  flex: 0 1 auto;
+  /* базис 0, а не по содержимому: перенос во флексе считается до сжатия, и длинное имя
+     («19 из 19 · The Elder Scrolls IV: Oblivion Remastered») уносило кнопку полки
+     на вторую строку — при том что многоточие ниже ровно для этого и стоит */
+  flex: 1 1 0;
+  text-align: center;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -224,7 +231,9 @@ h2, h3, h4 {
 /* шапка не накрывает верх постера: пока читатель едет вниз, она уезжает вместе с
    кнопками-таблетками (класс fabs-away ставит app.js), а на первом движении вверх
    возвращается — вместе с указателем «где я сейчас», который тогда и нужен */
-.fabs-away .site-head { opacity: 0; transform: translateY(-100%); pointer-events: none; }
+/* :focus-within — кнопка полки теперь внутри шапки: уехав, полоса осталась бы в tab order
+   и фокус висел бы на невидимой кнопке. Клавиатура держит шапку на месте */
+.fabs-away .site-head:not(:focus-within) { opacity: 0; transform: translateY(-100%); pointer-events: none; }
 .wordmark {
   font-family: var(--font-display);
   font-weight: 700;
@@ -317,21 +326,32 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   color: var(--color-muted);
 }
 .glass .meta::before { content: ""; float: inline-end; width: 13rem; height: 2rem; }
+/* Рамка в дневнике означает «нажимается». Факты записи — дата, часы, статус, платформа,
+   оценка — стоят в ленте плоско: иконка и текст. До этого они были такими же пилюлями,
+   как ссылка на другой заход, и строка не отвечала на «что тут можно нажать».
+   Пилюлю получает только нажимаемое — правило ниже, и оно же единственное место,
+   где перечислено, что в дневнике кнопка */
 .chip, .storelink {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2xs);
-  min-height: 1.8rem;
-  margin: 0 var(--space-xs) var(--space-xs) 0;
-  padding: 3px var(--space-xs);
-  border: 1px solid var(--color-rule);
-  border-radius: 999px;
-  background: var(--color-paper-2);
+  /* 2rem — общая высота нажимаемого во всём дневнике: чип, плашка магазина, «поделиться»,
+     кнопка полки. До этого «поделиться» стояла на 3 px выше соседей по той же строке */
+  min-height: 2rem;
+  /* плоскому чипу нужен свой воздух: рамки, которая отделяла бы соседа, у него больше нет */
+  margin: 0 var(--space-sm) var(--space-xs) 0;
   color: var(--color-muted);
   white-space: nowrap;
   vertical-align: middle;
 }
-.chip svg { width: 13px; height: 13px; opacity: 0.75; }
+.chip--link, .chip--filter, .chip--btn, .storelink {
+  padding: 3px var(--space-xs);
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  background: var(--color-paper-2);
+}
+/* иконка осталась единственной опорой плоского чипа — вполсилы она её не держит */
+.chip svg { width: 13px; height: 13px; }
 /* оценка чипом — только для узкого экрана, на широком её место занимает медаль */
 .chip--score { display: none; }
 .chip--score .of { font-size: 0.62rem; letter-spacing: 0.08em; color: var(--color-neutral); }
@@ -358,15 +378,32 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--color-scrim) calc(10% - 1px) 10%);
   opacity: 0.55;
 }
-.chip--date svg { color: var(--color-ico-date); opacity: 1; }
-.chip--hours svg { color: var(--color-ico-hours); opacity: 1; }
-.chip--flag { color: var(--color-accent); border-color: oklch(78% 0.14 75 / 0.4); }
+.chip--date svg { color: var(--color-ico-date); }
+.chip--hours svg { color: var(--color-ico-hours); }
+.chip--flag { color: var(--color-accent); }
 .chip--platform { text-transform: uppercase; }
 .chip--link { color: var(--color-accent); text-decoration: none; }
-.chip--link:hover { border-color: oklch(78% 0.14 75 / 0.5); }
 .chip--link:active { color: var(--color-ink); }
-.chip--btn { padding-inline: var(--space-xs); }
-.chip--btn:hover { border-color: var(--color-neutral); }
+
+/* ———— один жест на всё нажимаемое ————
+   Рамка и текст уходят в янтарь — и у чипа-ссылки, и у кнопки полки, и у «поделиться».
+   Раньше жестов было шесть: ореол 18 px у плашки Steam, серая рамка у чипа фильтра,
+   один цвет иконки у «поделиться», плотнеющий фон у крестика. Наведение под hover-медиа:
+   на тачскрине :hover залипает после тапа и кнопка остаётся подсвеченной.
+   Плашка Steam светится своим цветом — жест тот же, а цвет у неё фирменный. */
+.chip--link, .storelink, .share, .shelf-btn, .top-btn, .chip--filter, dialog .x {
+  transition: border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chip--link:hover, .share:hover, .shelf-btn:hover,
+  .top-btn:hover, .chip--filter:hover, dialog .x:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .storelink:hover { border-color: var(--color-steam); color: var(--color-steam); }
+  /* у крестика фон ещё и плотнеет: кружок лежит поверх кадра, одного цвета глифа там мало */
+  dialog .x:hover { background: var(--color-scrim-strong); }
+}
 .glass.note { position: relative; padding-top: var(--space-xl); }
 .note p { text-wrap: pretty; max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
@@ -456,27 +493,19 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
 .share.ok { color: var(--color-accent); cursor: default; }
 .share.ok .i-share { display: none; }
 .share.ok .i-check { display: inline; }
-.share:hover { color: var(--color-accent); }
 /* неудача копирования — надпись на самой кнопке: у успеха есть галочка, и без парной
    пометки провал выглядел бы ровно так же, как удача */
 .share.err { color: var(--color-muted); border-color: var(--color-neutral); }
 .share.err::after { content: "не вышло"; font-family: var(--font-mono); font-size: 0.62rem; }
 
-/* плашка магазина: тот же чип, только в цветах Steam и со свечением при наведении */
+/* плашка магазина: тот же чип, только в цветах Steam */
 .storelink {
   border-color: var(--color-steam-edge);
   background: var(--color-steam-bg);
   color: var(--color-steam);
   text-decoration: none;
-  transition: box-shadow var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
 }
 .storelink svg { width: 13px; height: 13px; }
-.storelink:hover {
-  border-color: var(--color-steam);
-  color: oklch(92% 0.06 235);
-  box-shadow: 0 0 0 1px oklch(78% 0.13 235 / 0.5), 0 0 18px oklch(78% 0.13 235 / 0.55);
-}
-.storelink:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* ———— медиа ———— */
 .glass--media { display: grid; gap: var(--space-md); }
@@ -562,24 +591,32 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 }
 
 /* ———— кнопка и оверлей полки ———— */
+/* кнопка — обычный элемент шапки, а не таблетка поверх неё: фикс-кнопка со своим фоном
+   и блюром выпирала за нижнюю кромку полосы, забирала у шапки 12rem паддинга под себя
+   и оставалась висеть одна на арте, когда шапка уезжала (fabs-away). В потоке шапки
+   она едет и уезжает вместе с ней, фон и блюр берёт у полосы */
 .shelf-btn {
-  position: fixed;
-  top: var(--space-sm);
-  right: max(var(--space-md), env(safe-area-inset-right));
-  z-index: var(--z-overlay);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
+  line-height: 1;
   letter-spacing: 0.02em;
   color: var(--color-ink);
-  background: var(--color-scrim-strong);
-  backdrop-filter: blur(6px);
+  background: none;
   border: 1px solid var(--color-neutral);
   border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
+  /* по центру строки, а не по базовой линии: у шапки align-items: baseline, и кнопка
+     тянула бы её вниз на свой спуск — полоса росла бы вокруг кнопки, а не вокруг вордмарка */
+  align-self: center;
+  /* 2rem — общая высота кнопок дневника */
+  min-height: 2rem;
+  padding: 0 var(--space-sm);
   cursor: pointer;
   white-space: nowrap;
+  position: relative;
 }
-.shelf-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+/* пальцу — 44 px, шапке — прежние 32: цель растёт псевдоэлементом, а не самой кнопкой.
+   Высота шапки задана вордмарком, и кнопка в 44 px растянула бы полосу на телефоне */
+.shelf-btn::before { content: ""; position: absolute; inset: -6px; }
 /* фильтр включён — видно снаружи, не открывая полку */
 .shelf-btn.is-on { border-color: var(--color-accent); color: var(--color-accent); }
 .shelf-btn.is-on::after { content: " ●"; font-size: 0.7em; vertical-align: 0.15em; }
@@ -646,12 +683,10 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .shelf__rowlab { width: 4rem; flex: none; color: var(--color-neutral); }
 .chip--filter {
   font-size: var(--text-xs);
-  min-height: 1.9rem;
   margin: 0;
   cursor: pointer;
   white-space: nowrap;
 }
-.chip--filter:hover { border-color: var(--color-neutral); color: var(--color-ink); }
 .chip--filter[aria-pressed="true"] {
   color: var(--color-paper);
   background: var(--color-accent);
@@ -758,7 +793,6 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
   transform: none;
   transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
 }
-.top-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .top-btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* ———— лайтбокс ———— */
@@ -823,25 +857,40 @@ dialog .x {
   transition: color var(--dur-micro) var(--ease-out), background var(--dur-micro) var(--ease-out);
 }
 dialog .x svg { width: 18px; height: 18px; }
-dialog .x:hover { color: var(--color-ink); background: var(--color-scrim-strong); }
 dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
 /* нет backdrop-filter (старый Firefox, отключённый флаг) — контраст держала одна
    прозрачность, и текст под панелью просвечивал насквозь. Фон становится плотным */
 @supports not (backdrop-filter: blur(2px)) {
-  .site-head, .glass, .shelf-btn, .top-btn { background: var(--color-scrim-solid); }
+  .site-head, .glass, .top-btn { background: var(--color-scrim-solid); }
 }
 
 /* ———— мобилка ———— */
 /* узкий экран. Брейкпоинт дублируется в NARROW в scripts/build.mjs (<source media>) —
    менять обязательно парой, иначе постер и мобильная вёрстка включатся на разной ширине */
 @media (max-width: 48rem) {
-  .site-head { padding-inline-end: var(--pad-x); background: var(--color-scrim-solid); }
+  /* шапка встаёт сеткой: кнопка полки держится верхней строки справа, «где я» и счётчик
+     уезжают под неё. Флекс с переносом ставил кнопку туда, куда попал перенос, — на 375 px
+     в хвост второй строки, на 430 px в хвост первой. Ставим ячейки руками: порядок в DOM
+     (вордмарк, «где я», счётчик, кнопка) сложен для широкого экрана, здесь он не тот */
+  .site-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: var(--space-md);
+    background: var(--color-scrim-solid);
+  }
+  .wordmark       { grid-area: 1 / 1; }
+  .shelf-btn      { grid-area: 1 / 2; justify-self: end; }   /* ячейка шире кнопки — иначе растянется на всю */
+  /* по левому краю, под вордмарком: центрирование на широком держит «где я» посередине
+     полосы, а в своей ячейке ему центрироваться не от чего */
+  .site-head__now { grid-area: 2 / 1; text-align: start; }
+  .site-head__sum { grid-area: 2 / 2; justify-self: end; }
   .glass { width: 100%; padding: var(--space-md); backdrop-filter: none; background: var(--color-scrim-solid); }
-  .shelf-btn, .shelf, .reveal::after, .site-head { backdrop-filter: none; }
+  .shelf, .reveal::after, .site-head { backdrop-filter: none; }
   /* без блюра полупрозрачная кнопка пропускает текст, который под ней проезжает:
      на мобилке фон сплошной, а тень отделяет плашку от полотна записи */
-  .shelf-btn, .top-btn {
+  .top-btn {
     background: var(--color-scrim-solid);
     box-shadow: 0 4px 18px var(--color-scrim);
   }
@@ -858,6 +907,9 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .score::before, .score .n { display: none; }
   .glass.note { padding-top: var(--space-lg); }        /* место под медаль больше не нужно */
   .glass .meta::before { display: none; }              /* и заглушка под неё тоже */
+  /* воздух между плоскими чипами режем: на телефоне лишние 4 px разносят ленту
+     на лишнюю строку — у записи с оценкой их становится три вместо двух */
+  .chip { margin-right: var(--space-xs); }
   .chip--score {
     display: inline-flex;
     gap: var(--space-xs);
@@ -925,7 +977,6 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   .pair, .moment { grid-template-columns: minmax(0, 1fr); }
   .moment.is-spoiler figcaption { grid-area: auto; }
   .lb__nav { opacity: 1; }   /* без hover стрелки видны всегда */
-  .shelf-btn { top: auto; bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
   /* фильтр не должен съедать экран целиком: воздуха меньше, чипы — крупнее пальцу */
   .shelf { padding: var(--space-md); max-height: 92dvh; }
   .shelf .shelf__title { margin-bottom: var(--space-xs); }
@@ -936,10 +987,10 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
      иначе сетке постеров не остаётся ни строки */
   .shelf__filters { max-height: 34dvh; overflow-y: auto; overscroll-behavior: contain; margin-bottom: 0; }
   /* уезжают, пока читатель едет вниз (класс ставит app.js), возвращаются на движении вверх */
-  .shelf-btn, .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
-  .fabs-away .shelf-btn, .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }
+  .top-btn { transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
+  .fabs-away .top-btn { opacity: 0; transform: translateY(140%); pointer-events: none; }
   .shelf-btn .fab-label, .top-btn .fab-label { display: none; }
-  .top-btn { right: auto; left: max(var(--space-md), env(safe-area-inset-left)); bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
+  .top-btn { bottom: max(1rem, env(safe-area-inset-bottom)); font-size: var(--text-md); line-height: 1; }
 }
 
 /* ———— reduced motion ———— */
@@ -952,6 +1003,6 @@ dialog .x:focus-visible { outline: 2px solid var(--color-focus); outline-offset:
   /* ::backdrop не попадает под «*» — переходу подложки длительность срезаем отдельно */
   dialog::backdrop { transition-duration: 0.01ms !important; }
   /* кнопки не едут, а гаснут: пространственное движение здесь необязательное */
-  .fabs-away .shelf-btn, .fabs-away .top-btn { transform: none; }
+  .fabs-away .top-btn { transform: none; }
   .fabs-away .site-head { transform: none; }
 }

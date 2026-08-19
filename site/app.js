@@ -113,14 +113,20 @@ const shelfPaint = () => {
 // пороги приезжают из сборки атрибутами; здесь только их применение
 const shelfChips = [...shelf.querySelectorAll(".chip--filter[data-k]")];
 const shelfReset = document.getElementById("shelf-reset");
+// «пока нет вердикта» — это заход, который ещё может его получить: дроп сюда не входит,
+// у него оценки нет по устройству. С «незакрытым» ниже множества сейчас совпадают, но это
+// свойство контента, а не правило: «пройдено» с score: tbd попадёт сюда и не попадёт туда
+const noVerdict = it => it.score == null && it.status !== "drop";
 const chipFits = (it, c) => {
   const d = c.dataset;
-  if (d.k === "score") return it.score != null && it.score >= Number(d.min);
+  if (d.k === "score") return d.v === "none" ? noVerdict(it) : it.score != null && it.score >= Number(d.min);
   if (d.k === "hours") return it.hours != null
     && (d.min === undefined || it.hours >= Number(d.min))
     && (d.max === undefined || it.hours < Number(d.max));
   if (d.k === "status") return it.status === d.v;
-  if (d.k === "flag") return it.flags.includes(d.v);
+  // «незакрытое» — ярлык к хвостам: отложил ∪ сейчас играю, одним нажатием
+  if (d.k === "flag") return d.v === "open" ? it.status === "pause" || it.status === "play"
+    : it.flags.includes(d.v);
   if (d.k === "genre") return it.genres.includes(d.v);
   return true;
 };
@@ -226,7 +232,9 @@ if (location.hash.startsWith("#f=")) {
   // битый процент в адресе — не повод уронить весь скрипт вместе с лайтбоксом
   const dec = t => { try { return decodeURIComponent(t); } catch { return t; } };
   const toks = new Set(location.hash.slice(3).split(",").map(dec));
-  shelfChips.forEach(c => c.setAttribute("aria-pressed", String(toks.has(chipTok(c)))));
+  // скрытый чип из ссылки не оживает: под него не подходит ни одна запись, и нажатым
+  // он дал бы пустую сетку без видимой причины — старая ссылка переживает наполнение дневника
+  shelfChips.forEach(c => c.setAttribute("aria-pressed", String(!c.hidden && toks.has(chipTok(c)))));
   shelfOpen(false);
 }
 
