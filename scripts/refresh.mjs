@@ -33,7 +33,7 @@ if ((!ids.length && !all) || (ids.length && all) || (fi !== -1 && (!fieldsArg ||
 // shots двигает нумерацию кадров в записях, micro подменяет клип всем записям с clip: store
 // и записям без clip (сборка подставляет микротрейлер сама) — молча их переписывать нельзя
 const RISKY = ["shots", "micro"];
-const SAFE = ["name", "hero", "logo", "poster", "posterSmall", "genres", "coop"];
+const SAFE = ["name", "hero", "logo", "poster", "posterSmall", "genres", "coop", "released"];
 const KNOWN = [...SAFE, ...RISKY];
 
 const fields = fieldsArg ? fieldsArg.split(",").map(s => s.trim()).filter(Boolean) : null;

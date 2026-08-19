@@ -3,6 +3,7 @@ steam: 333640
 finished: 2026-05-13
 hours: 6
 score: tbd
+paused: true
 verdict: Слишком странная, чтобы бросить.
 shots: [6, 7]
 clip: store

@@ -3,6 +3,7 @@ steam: 1962700
 finished: 2026-07-05
 hours: 9
 score: tbd
+paused: true
 verdict: Слишком рано всплыла.
 shots: [2, 5]
 clip: none

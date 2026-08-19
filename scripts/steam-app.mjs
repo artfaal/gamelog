@@ -67,5 +67,10 @@ export function appCache(appid, data, micro) {
     // фасеты полки: жанры Steam как есть, кооп — из категорий
     genres: (data.genres ?? []).map(g => g.description),
     coop: (data.categories ?? []).some(c => /Co-op/i.test(c.description)),
+    // дата выхода игры — строкой в формате Steam («Aug 6, 2018»), как отдали: разбирает
+    // её сборка. Поля нет в кэшах, записанных раньше него, — потребитель обязан это пережить.
+    // У ещё не вышедшей игры Steam тоже отдаёт «дату» («Q1 2027», «To be announced») —
+    // это план, а не факт выхода, и в кэш он не едет: даты выхода у игры пока нет
+    released: data.release_date?.coming_soon ? null : data.release_date?.date || null,
   };
 }

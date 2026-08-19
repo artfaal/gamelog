@@ -3,6 +3,7 @@ steam: 1458140
 finished: 2026-06-04
 hours: 20
 score: tbd
+paused: true
 verdict: Гештальт не закрыт)
 shots: [5, 4]
 clip: store

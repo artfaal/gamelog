@@ -13,7 +13,11 @@ const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
 
 // ---------- утилиты ----------
-const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+// `>` экранируется наравне с остальными: в HTML он был не обязателен, но тем же esc
+// собирается feed.xml, а в XML последовательность `]]>` в тексте запрещена — вердикт
+// с ней ронял бы фид молча (в ленте на вид всё цело). В атрибутах и тексте `&gt;`
+// браузер разбирает обратно в `>`, так что разметка от этого не меняется
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const abs = u => new URL(u, SITE + "/").href;
 const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 const ruDate = iso => {
@@ -91,7 +95,13 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   const dropped = fm.dropped === true;
   // finished: tbd — запись «сейчас играю»: игра ещё идёт, даты финала нет
   const playing = fm.finished === TBD;
+  if (fm.paused !== undefined && typeof fm.paused !== "boolean") fail(`paused должен быть true/false: ${fm.paused}`);
+  // paused: true — «отложил»: заход закончился, игра — нет. Без этого поля такая запись
+  // числилась бы пройденной: «пройдено» — это всё, что не дроп и не «сейчас играю»
+  const paused = fm.paused === true;
   if (dropped && playing) fail("дроп уже случился — у dropped: true нужна дата finished");
+  if (paused && dropped) fail("отложенная игра не брошена — paused: true и dropped: true вместе не бывают");
+  if (paused && playing) fail("«отложил» — это не «сейчас играю»: у paused: true нужна дата последнего захода");
   if (dropped && fm.score != null) fail("у дропа оценки нет — убери строку score");
   if (!dropped && fm.score !== TBD && !(Number.isFinite(fm.score) && fm.score >= 1 && fm.score <= 10 && fm.score % 0.5 === 0))
     fail("нужен score 1–10 с шагом 0,5 или tbd — или dropped: true");
@@ -178,6 +188,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       : null,
     dropped,
     playing,
+    paused,
     // фасеты полки: у Steam-игр жанры из кэша, у остальных — руками во фронтматтере,
     // иначе запись молча выпадает из любого жанрового среза
     genres: Array.isArray(fm.genres) ? fm.genres.map(String) : (steam?.genres ?? []).filter(g => !GENRE_STOP.has(g)),
@@ -256,6 +267,7 @@ const I_CHECK = icon('<polyline points="20 6 9 17 4 12"/>', "i-check");
 const I_CAL = icon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>');
 const I_CLOCK = icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
 const I_PLAY = icon('<polygon points="6 4 20 12 6 20 6 4"/>');
+const I_PAUSE = icon('<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>');
 // логотип Steam — simple-icons (CC0)
 const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>`;
 
@@ -270,12 +282,48 @@ const scoreChip = e => {
   return `<span class="chip chip--score${dim ? " is-dim" : ""}" aria-hidden="true">${body}</span>`;
 };
 
+// дата выхода игры: Steam отдаёт её строкой своего формата («Aug 6, 2018»), кэш кладёт
+// как есть, разбираем здесь. Год виден всегда, разрыв с датой прохождения — когда обе даты
+// полные: половина записей — игры старше захода на годы, и вердикты это проговаривают руками.
+// Кэш без поля (записан раньше него) и не-Steam запись чипа просто не получают.
+const RELEASED = /^[A-Za-z]{3,9} \d{1,2}, \d{4}$/;
+const releaseChip = e => {
+  const raw = String(e.steam?.released ?? "").trim();
+  const year = /\d{4}/.exec(raw)?.[0];
+  if (!year) return null;
+  const from = RELEASED.test(raw) ? Date.parse(`${raw} UTC`) : NaN;
+  // год из будущего — не выход, а планы Steam на игру («Q1 2027»): «вышла в 2027» дневник
+  // не говорит. Свежий кэш такого и не приносит, но старый и правленый руками — приносит.
+  // План текущего года («Q1 2026») от факта одним годом не отличить — в этом году чипу
+  // нужна полная дата, к тому же прошедшая
+  const thisYear = new Date().getUTCFullYear();
+  if (Number(year) > thisYear || (Number(year) === thisYear && !(from <= Date.now()))) return null;
+  const days = Number.isFinite(from) && e.fm.finished !== TBD
+    ? Math.floor((Date.parse(`${e.fm.finished}T00:00:00Z`) - from) / 86400000)
+    : null;
+  // разрыв мельче года меряем месяцами, мельче месяца — днями: «через 0 лет» — не разрыв,
+  // а нелепость. Года округляем вниз: 7,8 года — это «через 7 лет», а не «через 8».
+  // Год = 365 дней, месяц = 30: делители ровные, иначе между ними остаётся щель,
+  // в которой 365 дней превращаются в «11 месяцев»
+  const years = days == null ? 0 : Math.floor(days / 365);
+  const months = days == null ? 0 : Math.floor(days / 30);
+  const gap = days == null || days < 1 ? ""
+    : years >= 1 ? plural(years, "год", "года", "лет")
+    : months >= 1 ? plural(months, "месяц", "месяца", "месяцев")
+    : plural(days, "день", "дня", "дней");
+  return `<span class="chip chip--rel">вышла в ${year}${gap ? ` · через ${gap}` : ""}</span>`;
+};
+
 const metaLine = e => {
   const parts = [scoreChip(e), e.playing
     ? `<span class="chip chip--flag">${I_PLAY}сейчас играю</span>`
     : `<span class="chip chip--date">${I_CAL}${ruDate(e.fm.finished)}</span>`];
+  // «отложил» рядом с датой: дата у такой записи — последний заход, а не финал
+  if (e.paused) parts.push(`<span class="chip chip--flag">${I_PAUSE}отложил</span>`);
   // hours: tbd — часов просто нет в строке, выдумывать нечего
   if (e.fm.hours !== TBD) parts.push(`<span class="chip chip--hours">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
+  const rel = releaseChip(e);
+  if (rel) parts.push(rel);
   if (e.fm.platform) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
     const year = String(s.fm.finished).slice(0, 4);
@@ -397,14 +445,14 @@ entries.forEach((e, i) => {
 // подпись карточки полки: цифры на постере aria-hidden, а без них после фильтра «9+»
 // непонятно, почему запись попала в срез — статус, оценка и часы проговариваются вслух
 const shelfSay = e => [
-  e.dropped ? "дроп" : e.playing ? "сейчас играю" : "пройдено",
+  e.dropped ? "дроп" : e.playing ? "сейчас играю" : e.paused ? "отложил" : "пройдено",
   e.dropped || e.fm.score === TBD ? "" : `${ruScore(e.fm.score)} из 10`,
   typeof e.fm.hours === "number" ? ruHours(e.fm.hours) : "",
 ].filter(Boolean).join(", ");
 
 // карточка несёт свои данные атрибутами — фильтр на клиенте считает по ним, без второго индекса
 const cardData = e => [
-  `data-status="${e.dropped ? "drop" : e.playing ? "play" : "done"}"`,
+  `data-status="${e.dropped ? "drop" : e.playing ? "play" : e.paused ? "pause" : "done"}"`,
   typeof e.fm.score === "number" ? `data-score="${e.fm.score}"` : "",
   typeof e.fm.hours === "number" ? `data-hours="${e.fm.hours}"` : "",
   e.genres.length ? `data-genres="${esc(e.genres.join("|"))}"` : "",
@@ -429,7 +477,7 @@ const shelfHtml = [...byGroup].map(([g, items]) => `
             e.dropped ? "дроп" : e.fm.score === TBD ? "—" : ruScore(e.fm.score)}</span>
           <span>${typeof e.fm.hours === "number" ? `${e.fm.hours} ч` : ""}</span>
         </span>
-        ${e.playing ? '<span class="shelf__tag mono">играю</span>' : ""}
+        ${e.playing || e.paused ? `<span class="shelf__tag mono">${e.playing ? "играю" : "пауза"}</span>` : ""}
       </a>`).join("")}`).join("");
 
 // чипы фильтра: пороги живут здесь и уезжают в разметку атрибутами —
@@ -446,6 +494,7 @@ const CHIPS = [
     { k: "status", v: "done", lab: "пройдено" },
     { k: "status", v: "drop", lab: "дроп" },
     { k: "status", v: "play", lab: "играю" },
+    { k: "status", v: "pause", lab: "отложил" },
   ]],
   ["часы", [
     { k: "hours", max: 10, lab: "до 10 ч" },
@@ -453,7 +502,9 @@ const CHIPS = [
     { k: "hours", min: 40, lab: "40+ ч" },
   ]],
   ["ещё", [
-    { k: "flag", v: "coop", lab: "кооп" },
+    // «есть кооп», а не «кооп»: признак приезжает из категорий Steam и говорит о самой
+    // игре — поддерживает ли она совместную игру. Был ли этот заход совместным, запись не знает
+    { k: "flag", v: "coop", lab: "есть кооп" },
     { k: "flag", v: "moments", lab: "с моментами" },
   ]],
 ];
@@ -522,6 +573,7 @@ ${ogImage ? `<meta property="og:image" content="${esc(abs(ogImage))}">
 <meta property="og:image:alt" content="${esc(ogAlt)}">` : ""}
 <meta property="og:url" content="${SITE}/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="alternate" type="application/rss+xml" title="Хроника — игровой дневник" href="${SITE}/feed.xml">
 <!-- шрифты живут в styles.css и раздаются со своего домена; браузер узнаёт о них
      только разобрав таблицу, поэтому кириллический Cormorant — вордмарк и вердикт,
      самый крупный кегль первого экрана — просится вперёд. crossorigin обязателен и
@@ -647,6 +699,29 @@ writeFileSync("dist/sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>
     <lastmod>${lastmod}</lastmod>` : ""}
   </url>
 </urlset>
+`);
+// фид: те же опубликованные записи, что в ленте. link — на стаб /e/<slug>/: второй страницы
+// у записи нет, а стаб редиректит в ленту и несёт свою OG-карточку. pubDate — дата финала;
+// у «сейчас играю» её нет, и элемент опускается: в RSS он необязателен, а выдумывать дату —
+// врать читалке. В sitemap.xml фид не идёт — там намеренно один URL, корень
+const rfc822 = iso => new Date(`${iso}T12:00:00Z`).toUTCString();
+writeFileSync("dist/feed.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Хроника — игровой дневник</title>
+    <link>${SITE}/</link>
+    <description>Игры заканчиваются. Воспоминания — нет.</description>
+    <language>ru</language>
+    <atom:link href="${SITE}/feed.xml" rel="self" type="application/rss+xml"/>${entries.map(e => `
+    <item>
+      <title>${esc(e.name)} — ${esc(e.fm.verdict)}</title>
+      <link>${SITE}/e/${esc(e.slug)}/</link>
+      <guid>${SITE}/e/${esc(e.slug)}/</guid>
+      <description>${esc(ogDesc(e))}</description>${e.fm.finished === TBD ? "" : `
+      <pubDate>${rfc822(e.fm.finished)}</pubDate>`}
+    </item>`).join("")}
+  </channel>
+</rss>
 `);
 writeFileSync("dist/robots.txt", `User-agent: *
 Allow: /
