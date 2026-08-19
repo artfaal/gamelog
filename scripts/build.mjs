@@ -145,6 +145,8 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   // корпус для поиска: основной текст + моменты. Момент под спойлером не индексируется
   // целиком — заголовок у него тоже закрыт блюром
   const momentText = [];
+  // объём текста моментов — слагаемое заглушки высоты записи (stageVars ниже)
+  let momentChars = 0;
   if (momentsRaw !== undefined) {
     const chunks = momentsRaw.split(/^### /m);
     if (chunks[0].trim()) fail("текст между «## Моменты» и первым «### » потеряется — убери его");
@@ -161,6 +163,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       });
       if (/!\[[^\]]*\]\(/.test(text)) fail(`в моменте «${title}» больше одной картинки — оставь одну`);
       moments.push({ title, spoiler, shot, alt, html: mdToHtml(text.trim()) });
+      momentChars += title.length + text.trim().length;
       if (!spoiler) momentText.push(title, text.trim());
     }
   }
@@ -199,6 +202,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     coop: steam?.coop === true,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
+    textChars: main.trim().length + momentChars,
     indexText: [main.trim(), ...momentText].join(" ").trim(),
     moments,
   });
@@ -323,6 +327,14 @@ const heroVars = e => e.focus != null ? ` style="--focus:${e.focus}%"` : "";
 // значение в апострофах: так во всём исходнике сборки не остаётся жадного атрибута
 // кадра-заглушки, и grep-сторож ловит ровно его, а не собственный data-poster
 const dataPoster = url => url ? ` data-poster='${esc(url).replace(/'/g, "%27")}'` : "";
+
+// --h: во что обойдётся запись по высоте, в svh. Пока запись не отрисована,
+// content-visibility держит её этим числом (см. README, «Записи вне экрана»).
+// Общая заглушка на всех промахивалась до 235 svh и дёргала ленту при чтении
+// снизу вверх; формула подогнана по 19 записям на 390×844 и 1440×900, худший
+// промах — 53 svh. Слагаемые: полоса обоев и панель без текста, сам текст
+// (основной плюс моменты) и кадр каждого момента
+const stageVars = e => ` style="--h:${Math.round(200 + 0.094 * (e.textChars ?? 0) + 38 * e.moments.filter(m => m.shot).length)}"`;
 // кадр-заглушку браузер тянет немедленно даже при preload="none" — на первом экране
 // это мегабайты за клипы, до которых читатель ещё не доехал. Ставит его app.js на подходе
 const videoHtml = (src, label, { poster = "", preload = "none", hidden = false } = {}) =>
@@ -368,7 +380,7 @@ const entryHtml = (e, i) => {
       ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map(s => shotHtml(s, "")).join("")}</div>` : ""}
     </div>`;
   return `
-  <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}>
+  <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}${stageVars(e)}>
     <div class="hero${e.poster ? " hero--poster" : ""}"${heroVars(e)}>
       <picture>
         ${e.poster ? `<source media="${NARROW}" srcset="${esc(e.poster)}" width="600" height="900">` : ""}
