@@ -343,8 +343,12 @@ const lbShow = () => {
   const src = reel[pos];
   // кадр мог не дождаться своей очереди у наблюдателя — в лайтбокс он идёт уже с адресом
   if (src.dataset.src && !src.getAttribute("src")) src.src = src.dataset.src;
-  const cap = src.alt || src.getAttribute("aria-label") || "";
+  // имя лежит на кнопке-обёртке (у магазинного кадра alt пустой намеренно) — иначе
+  // подпись в диалоге оставалась пустой и кадр было не назвать
+  const cap = src.alt || src.getAttribute("aria-label")
+    || src.closest("button")?.getAttribute("aria-label") || "";
   const node = document.createElement(src.tagName === "VIDEO" ? "video" : "img");
+  node.className = "lb__media";
   // размеры переносим с оригинала: без них узел встаёт дефолтными 300×150 и прыгает,
   // когда приедут метаданные или картинка
   if (src.naturalWidth || src.videoWidth) {

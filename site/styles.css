@@ -821,6 +821,10 @@ button.spoiler:focus-visible { outline: 2px solid var(--color-focus); outline-of
 .lb__stage { display: grid; place-items: center; }
 .lb__stage:focus, .lb__stage:focus-visible { outline: none; }
 .lb__stage img, .lb__stage video { max-width: 100%; max-height: 84dvh; width: auto; height: auto; }
+/* видео в лайтбоксе появляется без метаданных (под «экономией трафика» их и не будет)
+   и без них встало бы дефолтными 300×150, а потом прыгнуло. Клипы дневника 16:9 —
+   тот же резерв, что и в ленте */
+.lb__stage video.lb__media { aspect-ratio: 16 / 9; height: auto; }
 .lb .cap { margin-top: var(--space-sm); display: flex; justify-content: space-between; gap: var(--space-md); }
 .lb__count { white-space: nowrap; }
 /* края кадра — зоны перелистывания: стрелка проявляется на наведении, с клавиатуры — по фокусу */

@@ -47,7 +47,8 @@ const GENRE_STOP = new Set(["Early Access"]);
 // узкий экран: обои переключаются с широкого hero на вертикальный постер.
 // Значение дублируется в @media site/styles.css — менять обязательно парой.
 const NARROW = "(max-width: 48rem)";
-const isVideo = p => /\.(webm|mp4)$/i.test(String(p).split(/[?#]/)[0]);
+const VIDEO_EXT = /\.(webm|mp4|mov)$/i;
+const isVideo = p => VIDEO_EXT.test(String(p).split(/[?#]/)[0]);
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
   '<button type="button" class="spoiler" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
@@ -124,32 +125,33 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     else fail(`нет cache/${fm.steam}.json — запусти: node scripts/new.mjs ${fm.steam}`);
   } else if (!fm.hero) fail("нужно поле steam: <appid> — или hero: media/…");
 
-  // расширение решает, чем медиа станет в разметке: клип — <video>, кадр — <img>.
-  // Без проверки clip: media/foo.jpg молча уезжал в <video>, а mp4 в shots — в <img>,
-  // и сборка оставалась зелёной
-  const VIDEO_EXT = /\.(mp4|webm|mov)$/i;
-  const mediaKind = (ref, kind) => {
-    if (typeof ref !== "string" || !ref.startsWith("media/")) return;
-    const video = VIDEO_EXT.test(ref);
-    if (kind === "clip" && !video) fail(`clip должен быть видео, а не картинкой: ${ref}`);
-    if (kind === "shot" && video) fail(`кадр в shots должен быть картинкой, а не видео: ${ref}`);
+  // расширение решает, чем ссылка станет в разметке: клип — <video>, кадр — <img>.
+  // Проверка живёт внутри media(), потому что сюда сходится всё — clip, shots, hero,
+  // logo, poster, кадры моментов — и уже после нормализации «./media/…»: снаружи её
+  // обходила любая запись пути, кроме буквального «media/…»
+  const KIND = {
+    clip: { want: true, msg: "clip должен быть видео" },
+    shot: { want: false, msg: "кадр должен быть картинкой, а не видео" },
+    art: { want: false, msg: "обложка должна быть картинкой, а не видео" },
   };
 
-  const media = p => {
+  const media = (p, kind = null) => {
     if (typeof p === "number") {
       if (!steam || !(p in steam.shots)) { fail(`нет магазинного скрина №${p}`); return null; }
       return steam.shots[p];
     }
     const ref = String(p).replace(/^\.\//, "");
-    if (/^https?:\/\//.test(ref)) return ref;
+    const check = url => {
+      const rule = kind && KIND[kind];
+      if (rule && isVideo(url) !== rule.want) fail(`${rule.msg}: ${ref}`);
+      return url;
+    };
+    if (/^https?:\/\//.test(ref)) return check(ref);
     if (!ref.startsWith("media/") || ref.includes("..")) { fail(`медиа-ссылка должна быть номером скрина, https://… или media/…: ${p}`); return null; }
     if (!existsSync(`content/${ref}`) || !statSync(`content/${ref}`).isFile())
       { fail(`нет файла content/${ref}`); return null; }
-    return ref;
+    return check(ref);
   };
-
-  mediaKind(fm.clip, "clip");
-  if (Array.isArray(fm.shots)) fm.shots.forEach(r => mediaKind(r, "shot"));
 
   // тело: основной текст + секция «## Моменты» (### Заголовок {spoiler} / ![alt](ref) / текст)
   const parts = body.split(/^## Моменты\s*$/m);
@@ -187,24 +189,24 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     fm,
     steam,
     name: fm.name ?? steam?.name ?? slug,
-    hero: media(fm.hero ?? steam?.hero),
+    hero: media(fm.hero ?? steam?.hero, "art"),
     // none — у части игр логотипа и постера в Steam нет (404): имя рисуется
     // текстом, на полку идёт кроп hero
-    logo: fm.logo === "none" ? null : fm.logo != null && fm.logo !== "dark" ? media(fm.logo) : steam?.logo ?? null,
+    logo: fm.logo === "none" ? null : fm.logo != null && fm.logo !== "dark" ? media(fm.logo, "art") : steam?.logo ?? null,
     // dark — не путь, а признак вида: логотип игры нарисован тёмным, и на светлом
     // арте ему нужна светлая тень вместо общей тёмной. Ставится руками, глазами
     logoDark: fm.logo === "dark",
-    poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : steam?.poster ?? null,
+    poster: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster, "art") : steam?.poster ?? null,
     // полка берёт готовый 600×900, а не ретиновый _2x: те же карточки втрое легче.
     // Кэши, записанные до появления поля, его не имеют — падаем на poster
-    posterSmall: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster) : posterSmallOf(steam),
+    posterSmall: fm.poster === "none" ? null : fm.poster != null ? media(fm.poster, "art") : posterSmallOf(steam),
     // смысловой центр обоев по горизонтали: hero — широкий баннер, на узком экране
     // от него видно ~пятую часть ширины, и центр кадра сплошь и рядом не там
     focus: fm.focus ?? null,
-    shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(media).filter(Boolean),
+    shots: ((Array.isArray(fm.shots) ? fm.shots : null) ?? (steam && !dropped ? steam.shots.slice(0, 2) : [])).map(r => media(r, "shot")).filter(Boolean),
     // у дропа медиа по умолчанию нет — но заданные руками shots и clip показываются
     clip: fm.clip === "none" ? null
-      : fm.clip && fm.clip !== "store" ? media(fm.clip)
+      : fm.clip && fm.clip !== "store" ? media(fm.clip, "clip")
       : (fm.clip === "store" || !dropped) ? steam?.micro ?? null
       : null,
     dropped,
@@ -352,7 +354,11 @@ const stageVars = e => ` style="--h:${Math.round(
   173 + 0.0859 * (e.textChars ?? 0) + 35 * e.moments.filter(m => m.shot).length + (e.clip ? 45 : 0),
 )}"`;
 // размеры картинки из её заголовка: у jpeg — рамка SOF, у png — IHDR. Свои двадцать
-// строк вместо зависимости: сборке нужны только ширина и высота
+// строк вместо зависимости: сборке нужны только ширина и высота. Чего не умеет:
+// EXIF-поворот (у кадра с Orientation 5–8 браузер поменяет стороны местами, а рамка
+// об этом не знает) и форматы кроме jpeg/png — там вернётся null, и атрибутов просто
+// не будет, как было до этого у всех. В content/media лежат кадры из игр и кропы,
+// прогнанные через ffmpeg по политике кадров, — EXIF там не выживает
 const mediaSize = file => {
   let buf;
   try { buf = readFileSync(file); } catch { return null; }
@@ -375,6 +381,9 @@ const mediaSize = file => {
 // кадров Steam это всегда 1920×1080, свои же бывают узкими кропами (README, «Кадры»),
 // и подставлять им 1920×1080 значит обещать браузеру не ту высоту
 const shotSize = src => {
+  // магазинный кадр Steam всегда 1920×1080; свой читается из файла; чужой по https —
+  // ссылка, о которой сборка не знает ничего, и врать про неё размерами нельзя
+  if (/^https?:\/\//.test(src)) return "";
   const size = /^media\//.test(src) ? mediaSize(`content/${src}`) : { w: 1920, h: 1080 };
   return size ? ` width="${size.w}" height="${size.h}"` : "";
 };
