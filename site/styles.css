@@ -295,9 +295,10 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
   justify-items: center;
 }
 .glass {
-  /* --w: предел ширины панели. У медиа он свой — кадру ширина в пользу,
-     а панель текста держит ровно свою колонку (75ch), иначе она на треть шире
-     того, что в ней лежит, и правый край панели повисает пустотой */
+  /* --w: предел ширины панели. Один на все панели записи: текст, кадры и
+     моменты стоят друг под другом одной колонкой, и разная ширина читается
+     ступенькой. Пустоту справа от текста (абзац держит 75ch) терпим —
+     ровный край стопки важнее */
   --w: 76rem;
   background: var(--color-scrim-strong);
   backdrop-filter: blur(8px);
@@ -366,7 +367,7 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto 250svh; }
 .chip--link:active { color: var(--color-ink); }
 .chip--btn { padding-inline: var(--space-xs); }
 .chip--btn:hover { border-color: var(--color-neutral); }
-.glass.note { --w: 54rem; position: relative; padding-top: var(--space-xl); }
+.glass.note { position: relative; padding-top: var(--space-xl); }
 .note p { text-wrap: pretty; max-width: 75ch; margin-bottom: var(--space-md); font-size: var(--text-prose); color: var(--color-muted); }
 .note p:last-child { margin-bottom: 0; }
 /* название игры над вердиктом: логотип на арте при чтении уезжает вверх,

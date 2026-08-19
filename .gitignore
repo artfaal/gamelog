@@ -5,3 +5,6 @@ content/media/*.mp4
 cache/assets/
 add_game.md
 shots/
+
+# рабочие каталоги агентов: worktree-сессии и их скриншоты, десятки и сотни МБ
+.claude/
