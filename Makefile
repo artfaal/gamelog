@@ -1,5 +1,6 @@
 # gamelog: check — линт; build — прод-сборка; drafts — черновики; serve — просмотр;
 # deploy — на orion; hours — сверка часов со Steam; suggest — кандидаты в дневник;
+# timeline — когда играл, по ачивкам;
 # video/image — проверка клипов и кадров по политике; refresh — что разошлось со Steam
 DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
@@ -43,9 +44,14 @@ hours:
 suggest:
 	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/suggest.mjs
 
+# когда играл и до чего дошёл — по датам ачивок. Тоже только читает
+timeline:
+	@test -n "$(APPID)" || { echo "нужен appid: make timeline APPID=1245620"; exit 1; }
+	@set -a; . ~/.skill-secrets/game-compass.env; set +a; node scripts/timeline.mjs $(APPID)
+
 # что разошлось со Steam по всем кэшам; ничего не пишет.
 # Точечная запись поля — прямым вызовом: node scripts/refresh.mjs <appid> --field genres
 refresh:
 	@node scripts/refresh.mjs --all
 
-.PHONY: check build drafts serve deploy hours suggest video video-fix image refresh
+.PHONY: check build drafts serve deploy hours suggest timeline video video-fix image refresh
