@@ -64,7 +64,11 @@ for (const name of files) {
   if (perSec > LIMITS.mbPerSecond) gripes.push(`${perSec.toFixed(2)} МБ/с — тяжелее ${LIMITS.mbPerSecond}`);
   if (mb > LIMITS.mbTotal) gripes.push(`${mb.toFixed(0)} МБ — тяжелее ${LIMITS.mbTotal}`);
 
-  let fs = faststart(file);
+  // faststart — свойство контейнера MP4 (порядок боксов moov/mdat). У WebM боксов нет,
+  // и разбор всегда возвращал бы «плохо»: с --fix это молча ремуксило webm в mp4
+  // и переименовывало результат поверх исходника — файл с mp4 внутри и webm снаружи
+  const mp4 = /\.mp4$/i.test(name);
+  let fs = mp4 ? faststart(file) : true;
   if (!fs && FIX) {
     const tmp = `${file}.faststart.mp4`;
     execFileSync("ffmpeg", ["-v", "error", "-y", "-i", file, "-c", "copy", "-movflags", "+faststart", tmp]);

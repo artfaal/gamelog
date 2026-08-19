@@ -62,9 +62,9 @@ async function jitter() {
   const step = window.innerWidth < 768 ? 600 : 700;
   let prev = document.documentElement.scrollHeight;
   let jumps = 0, sum = 0, worst = 0, guard = 0, stuck = 0;
-  // видимый рывок: сколько запись под пальцем уехала СВЕРХ того, на сколько мы
-  // прокрутили. Изменение scrollHeight ниже читателя рывком не является, а scroll
-  // anchoring, наоборот, часть его гасит — считаем то, что реально видно
+  // видимый рывок: куда запись уехала на ЭКРАНЕ против того, куда её отправил наш шаг.
+  // Сравнивать надо с намеренным шагом, а не с фактическим сдвигом scrollY: когда рывок
+  // гасит scroll anchoring, он меняет как раз scrollY, и разница с ним всегда даст ноль
   let seenWorst = 0, seenSum = 0;
   const anchor = () => document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)
     ?.closest("article.stage");
@@ -89,8 +89,9 @@ async function jitter() {
       prev = h;
     }
     if (mark?.isConnected && top != null) {
-      const шагнули = before - window.scrollY;
-      const уехало = Math.abs(mark.getBoundingClientRect().top - top - шагнули);
+      // у верхней кромки шаг упирается в границу — там ожидаемым считаем то, что осталось
+      const ждали = Math.min(step, before);
+      const уехало = Math.abs(mark.getBoundingClientRect().top - top - ждали);
       if (уехало > 1) { seenSum += уехало; seenWorst = Math.max(seenWorst, уехало); }
     }
 

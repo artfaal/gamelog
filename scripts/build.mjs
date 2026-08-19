@@ -47,7 +47,10 @@ const GENRE_STOP = new Set(["Early Access"]);
 // узкий экран: обои переключаются с широкого hero на вертикальный постер.
 // Значение дублируется в @media site/styles.css — менять обязательно парой.
 const NARROW = "(max-width: 48rem)";
-const VIDEO_EXT = /\.(webm|mp4|mov)$/i;
+// mp4 и webm — те же два формата, что знают политика клипов (scripts/video.mjs),
+// .gitignore и README. Третий формат добавляется сразу во всех четырёх местах, иначе
+// он разрешён сборкой, но обходит проверку веса и может уехать в git
+const VIDEO_EXT = /\.(webm|mp4)$/i;
 const isVideo = p => VIDEO_EXT.test(String(p).split(/[?#]/)[0]);
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
