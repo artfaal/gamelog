@@ -520,7 +520,19 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto calc(var(
 }
 .shotbtn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 .shot { border-radius: var(--radius-sm); width: 100%; }
-.clip { border-radius: var(--radius-sm); width: 100%; accent-color: var(--color-accent); }
+/* место под клип резервируется заранее: <video> до метаданных занимает дефолтные 150 px
+   и, дорастая до настоящих пропорций, двигает панель под собой — на широком экране это
+   495 px на запись и 6930 px по всей ленте. Все клипы дневника 16:9: свои 1920×1080
+   и 1600×900, микротрейлеры Steam 630×354 и 854×480. object-fit и подложка — на случай
+   клипа с другими пропорциями: лучше поля по краям, чем обрезанный кадр */
+.clip {
+  border-radius: var(--radius-sm);
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: var(--color-scrim);
+  accent-color: var(--color-accent);
+}
 
 /* ———— моменты ———— */
 .moments { display: grid; gap: var(--space-lg); }
@@ -539,8 +551,6 @@ article.stage { content-visibility: auto; contain-intrinsic-size: auto calc(var(
   margin-bottom: var(--space-xs);
 }
 .moment figcaption p { color: var(--color-muted); max-width: 65ch; margin-bottom: var(--space-sm); }
-/* место под видео резервируется заранее — лента не дёргается, пока грузится метадата */
-.moment video.clip { aspect-ratio: 16 / 9; object-fit: contain; background: var(--color-scrim); }
 
 /* ———— спойлеры ———— */
 .spoiler {
