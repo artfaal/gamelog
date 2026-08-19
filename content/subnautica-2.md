@@ -1,6 +1,6 @@
 ---
 steam: 1962700
-finished: 2026-07-05
+finished: 2026-07-19
 hours: 9
 score: tbd
 paused: true

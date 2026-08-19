@@ -1,6 +1,6 @@
 ---
 steam: 588650
-finished: 2026-06-01
+finished: 2026-06-03
 hours: 47
 score: 8.5
 verdict: Игра, которую я не удаляю.
