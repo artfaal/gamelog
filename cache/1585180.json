@@ -1,0 +1,27 @@
+{
+  "appid": 1585180,
+  "name": "Drova - Forsaken Kin",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1585180/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1585180/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1585180/library_600x900_2x.jpg",
+  "posterSmall": "https://cdn.cloudflare.steamstatic.com/steam/apps/1585180/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_747e0589ecd12091730bc181b995d0a9bfbf1fc9.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_807e7b8d4f8fe6d5243a78a627a4c1b920b86900.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_757683477f1cc491c3f5b3d26b2f9a5f0063ddc8.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_dd3f1721b79ec672984139a8ad69b3ad3c2df097.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_04a1ca1945fcb236bd475a09d3cd912c338bfd57.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_535752523256f536ab821752484a37ce49a96d64.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_33eb91979a5dd32c99a4e4218decb3de9e7bc80a.1920x1080.jpg?t=1781102979",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1585180/ss_f5762092654e5e4fbe7c38ce9da9df536cd2480e.1920x1080.jpg?t=1781102979"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/257071821/microtrailer.webm",
+  "genres": [
+    "Action",
+    "Adventure",
+    "Indie",
+    "RPG"
+  ],
+  "coop": false,
+  "released": "Oct 15, 2024"
+}
