@@ -3,6 +3,7 @@ steam: 3167020
 finished: 2026-01-22
 hours: 88
 score: 9
+paused: true
 verdict: 88 часов на уток. И это ещё не конец.
 shots: [5, 7]
 clip: media/duckov-trailer.mp4

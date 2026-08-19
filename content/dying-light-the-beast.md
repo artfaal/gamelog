@@ -3,6 +3,7 @@ steam: 3008130
 finished: 2025-12-07
 hours: 51
 score: 7.5
+paused: true
 verdict: Ради одного паркура — уже стоило.
 shots: [2, 5]
 clip: media/dlb-trailer.mp4
