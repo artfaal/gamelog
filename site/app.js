@@ -484,8 +484,25 @@ lb.addEventListener("close", () => {
   }), { rootMargin: "100% 0px" });
   const warmBg = () => document.querySelectorAll("article.stage").forEach(a => bgs.observe(a));
 
+  // раскладка записи заранее: у всех записей заглушка одна (250svh = 2125 px на телефоне),
+  // а занимают они от 1747 до 4267 — и в момент раскладки разница сдвигает всё, что ниже.
+  // Когда этот момент наступит, решает движок: Chrome берёт запас около 1200 px, Safari
+  // раскладывает прямо в кадре, поэтому дёргалось только в нём. Запас задан В ПИКСЕЛЯХ:
+  // проценты у rootMargin считаются от размеров root, и «200%» на узком экране — совсем
+  // не два экрана. Замерено на живой ленте в Safari: без прогрева 7 скачков из 10 попали
+  // в кадр (крупнейший 1183 px), с прогревом — ни одного, хотя сами скачки остались
+  const layout = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    layout.unobserve(e.target);
+    e.target.classList.add("laid-out");
+  }), { rootMargin: "2500px 0px" });
+  const warmLayout = () => document.querySelectorAll("article.stage").forEach(a => layout.observe(a));
+
   // один гейт на оба пробуждения: не под «экономией трафика» и не раньше первого движения
   // по ленте — на первом экране эти мегабайты отнимают канал у того, что уже на экране
+  // раскладку греем всегда, даже под «экономией трафика»: это не про байты, а про то,
+  // дёргается лента под пальцем или нет
+  addEventListener("scroll", warmLayout, { once: true, passive: true });
   if (!saveData) addEventListener("scroll", () => { warmBg(); warmShelf(); }, { once: true, passive: true });
 }
 
