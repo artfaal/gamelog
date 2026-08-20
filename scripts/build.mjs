@@ -171,8 +171,6 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   // корпус для поиска: основной текст + моменты. Момент под спойлером не индексируется
   // целиком — заголовок у него тоже закрыт блюром
   const momentText = [];
-  // объём текста моментов — слагаемое заглушки высоты записи (stageVars ниже)
-  let momentChars = 0;
   if (momentsRaw !== undefined) {
     const chunks = momentsRaw.split(/^### /m);
     if (chunks[0].trim()) fail("текст между «## Моменты» и первым «### » потеряется — убери его");
@@ -189,7 +187,6 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
       });
       if (/!\[[^\]]*\]\(/.test(text)) fail(`в моменте «${title}» больше одной картинки — оставь одну`);
       moments.push({ title, spoiler, shot, alt, html: mdToHtml(text.trim()) });
-      momentChars += title.length + text.trim().length;
       if (!spoiler) momentText.push(title, text.trim());
     }
   }
@@ -228,7 +225,6 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     coop: steam?.coop === true,
     html: mdToHtml(main.trim()),
     rawText: main.trim(),
-    textChars: main.trim().length + momentChars,
     indexText: [main.trim(), ...momentText].join(" ").trim(),
     moments,
   });
@@ -350,15 +346,6 @@ const heroVars = e => e.focus != null ? ` style="--focus:${e.focus}%"` : "";
 // кадра-заглушки, и grep-сторож ловит ровно его, а не собственный data-poster
 const dataPoster = url => url ? ` data-poster='${esc(mediaUrl(url)).replace(/'/g, "%27")}'` : "";
 
-// --h: во что обойдётся запись по высоте, в svh. Пока запись не отрисована,
-// content-visibility держит её этим числом (см. README, «Записи вне экрана»).
-// Общая заглушка на всех промахивалась до 235 svh и дёргала ленту при чтении
-// снизу вверх. Слагаемые: панель и полоса обоев без содержимого, объём текста
-// (основного и моментов, в сырых markdown-символах), медиа каждого момента
-// и клип в шапке записи. Подогнано по всем записям на 390×844 и 1440×900
-const stageVars = e => ` style="--h:${Math.round(
-  179 + 0.0908 * (e.textChars ?? 0) + 35 * e.moments.filter(m => m.shot).length + (e.clip ? 39 : 0),
-)}"`;
 // размеры кадра в разметку: место под него резервируется до загрузки. У магазинных
 // кадров Steam это всегда 1920×1080, свои же бывают узкими кропами (README, «Кадры»),
 // и подставлять им 1920×1080 значит обещать браузеру не ту высоту
@@ -417,7 +404,7 @@ const entryHtml = (e, i) => {
       ${e.shots.length ? `<div class="pair">${e.shots.slice(0, 2).map((s, n) => shotHtml(s, "", false, `${e.name}, кадр ${n + 1}`)).join("")}</div>` : ""}
     </div>`;
   return `
-  <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}${stageVars(e)}>
+  <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}>
     <div class="hero${e.poster ? " hero--poster" : ""}"${heroVars(e)}>
       <picture>
         ${e.poster ? `<source media="${NARROW}" srcset="${esc(mediaUrl(e.poster))}" width="600" height="900">` : ""}
