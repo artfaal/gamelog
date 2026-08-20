@@ -322,10 +322,15 @@ const metaLine = e => {
   for (const s of e.siblings) {
     const year = String(s.fm.finished).slice(0, 4);
     let label;
+    // связка называет исход соседнего захода и его место во времени. «Отложил» —
+    // такой же исход, как дроп и прохождение (README, «Сейчас играю и „пока не знаю“»),
+    // и без своей ветки отложенный заход подписывался «прошёл». Дроп тоже сверяется
+    // с датой: «первый заход» врёт, если он случился позже нынешнего
+    const позже = s.fm.finished > e.fm.finished;
     if (s.playing) label = "сейчас играю";
-    else if (s.dropped) label = `первый заход — дроп в ${year}`;
-    else if (s.fm.finished > e.fm.finished) label = `вернулся и прошёл в ${year}`;
-    else label = `прошёл в ${year}`;
+    else if (s.dropped) label = позже ? `потом дропнул в ${year}` : `первый заход — дроп в ${year}`;
+    else if (s.paused) label = позже ? `вернулся и отложил в ${year}` : `отложил в ${year}`;
+    else label = позже ? `вернулся и прошёл в ${year}` : `прошёл в ${year}`;
     parts.push(`<a class="chip chip--link" href="#${s.slug}">${label} ↗</a>`);
   }
   // есть appid — даём читателю прямой путь на страницу игры в магазине

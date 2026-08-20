@@ -184,8 +184,7 @@ draft: true             # убрать перед публикацией
 git worktree add /tmp/base 0b1e1f3 && cd /tmp/base
 ln -s ~/PROJECTS/gamelog/node_modules .            # cache/*.json и content/ приезжают с коммитом
 cp -R ~/PROJECTS/gamelog/cache/assets cache/       # ассеты вне git, лежат подкаталогами по appid
-cp ~/PROJECTS/gamelog/content/media/*.mp4 ~/PROJECTS/gamelog/content/media/*.webm \
-   content/media/ 2>/dev/null                      # клипы тоже вне git
+cp ~/PROJECTS/gamelog/content/media/*.{mp4,webm}(N) content/media/   # клипы тоже вне git
 node scripts/build.mjs && (cd dist && python3 -m http.server 8487)
 ```
 
@@ -301,8 +300,10 @@ Steam и говорит о самой игре, а был ли этот конк
 а весит он втрое больше. Поля нет в кэшах, записанных раньше, чем оно появилось, —
 сборка выводит лёгкий постер из ретинового сама (`posterSmallOf` в `steam-app.mjs`),
 переписывать готовые кэши ради одного поля нельзя. Постеры полки начинают грузиться
-в первую же паузу после того, как читатель тронул ленту: полка живёт в `<dialog>`,
-до открытия браузер не грузит из неё ни одной картинки — и сетка собиралась на глазах.
+в первую же паузу после того, как читатель тронул ленту. Сама сетка лежит не в диалоге,
+а в хвостовой стене (`app.js` переносит узел в `<dialog>` только на открытии), и от
+первого экрана её отделяет вся лента — нативный `loading="lazy"` до неё не доходит,
+и сетка собиралась на глазах у того, кто открыл полку сразу.
 
 Пороги чипов заданы в `scripts/build.mjs` (список `CHIPS`) и уезжают в разметку
 атрибутами `data-k/min/max/v` — `site/app.js` их только применяет и второй копии

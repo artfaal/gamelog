@@ -4,7 +4,7 @@
 // перекладывает moov в начало файла (--movflags +faststart, поток копируется).
 // Пережатие оставлено человеку: исходник у него, а повторное сжатие уже сжатого
 // съедает картинку. Для нарушителей печатается готовая команда.
-import { readdirSync, statSync, renameSync, existsSync, rmSync, openSync, readSync, closeSync } from "node:fs";
+import { readdirSync, statSync, renameSync, chmodSync, existsSync, rmSync, openSync, readSync, closeSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { LIMITS } from "./video-policy.mjs";
 
@@ -64,6 +64,13 @@ const faststart = file => {
 const files = readdirSync(DIR).filter(f => /\.(mp4|webm)$/i.test(f)).sort();
 if (!files.length) { console.log("клипов нет"); process.exit(0); }
 
+// сигнал минует finally, и недописанный .part остался бы лежать среди клипов
+const tmps = new Set();
+for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => {
+  for (const t of tmps) if (existsSync(t)) rmSync(t, { force: true });
+  process.exit(130);
+});
+
 let bad = 0, fixed = 0;
 for (const name of files) {
   const file = `${DIR}/${name}`;
@@ -87,16 +94,30 @@ for (const name of files) {
     // временный файл: расширение НЕ клиповое (иначе следующий прогон посчитает огрызок
     // ещё одним клипом, а «foo.mp4.faststart.mp4» — вполне законное имя чужого файла,
     // который ffmpeg -y снёс бы молча). Контейнер задаём флагом, а не суффиксом;
-    // занятое имя — отказ, а не перезапись; оборвался ffmpeg — убираем за собой
+    // занятое имя — отказ, а не перезапись
     const tmp = `${file}.faststart-${process.pid}.part`;
-    if (existsSync(tmp)) { console.error(`✗ ${name}: ${tmp} уже занят — не трогаю`); continue; }
+    if (existsSync(tmp)) { console.log(`✗ ${name.padEnd(22)} ${tmp} уже занят — не трогаю`); bad++; continue; }
+    const before = statSync(file);
+    tmps.add(tmp);                              // на случай Ctrl-C, см. обработчик ниже
     try {
-      execFileSync("ffmpeg", ["-v", "error", "-i", file, "-c", "copy", "-movflags", "+faststart", "-f", "mp4", tmp]);
-      renameSync(tmp, file);
-      fs = true;
-      fixed++;
+      // -map 0: без него ffmpeg берёт по одной дорожке каждого типа, и вторая звуковая
+      // или субтитры молча пропадают — это уже не «переупаковка без пережатия»
+      execFileSync("ffmpeg", ["-v", "error", "-i", file, "-map", "0", "-c", "copy",
+        "-movflags", "+faststart", "-f", "mp4", tmp]);
+      // файл мог смениться, пока шёл ремукс: rename затёр бы чужую свежую версию старой
+      const after = statSync(file);
+      if (after.mtimeMs !== before.mtimeMs || after.size !== before.size) {
+        console.log(`✗ ${name.padEnd(22)} изменился во время работы — не трогаю`);
+        bad++;
+      } else {
+        chmodSync(tmp, before.mode);            // права исходника, а не 0644 от ffmpeg
+        renameSync(tmp, file);
+        fs = true;
+        fixed++;
+      }
     } finally {
       if (existsSync(tmp)) rmSync(tmp, { force: true });
+      tmps.delete(tmp);
     }
   }
   if (!fs) gripes.push("moov в конце — нет faststart");
