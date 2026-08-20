@@ -48,6 +48,20 @@ const isVideo = p => VIDEO_EXT.test(/^https?:\/\//.test(String(p)) ? String(p).s
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
   '<button type="button" class="spoiler" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
+// адрес медиа в разметке: имя файла кодируется посегментно. Без этого «probe#1.jpg»
+// уезжал в src как есть, и браузер просил «media/probe», считая остаток фрагментом, —
+// файл на сервере лежал, а кадр не показывался. Внешние ссылки не трогаем: они уже URL
+const mediaUrl = p => /^https?:\/\//.test(p) ? p : String(p).split("/").map(encodeURIComponent).join("/");
+
+// картинка, написанная прямо в тексте записи, проходит мимо наших помощников — адрес
+// ей кодирует рендерер marked, иначе тот же «probe#1.jpg» давал 404 в прозе
+marked.use({ renderer: {
+  image({ href, title, text }) {
+    const attrs = [`src="${esc(mediaUrl(href))}"`, `alt="${esc(text ?? "")}"`];
+    if (title) attrs.push(`title="${esc(title)}"`);
+    return `<img ${attrs.join(" ")}>`;
+  },
+} });
 const mdToHtml = md => marked.parse(spoilers(md));
 // текст записи без разметки и без спойлеров: OG-описание и индекс поиска на полке.
 // Спойлер вычёркивается вместе с содержимым — из-под блюра ничто не находится
@@ -334,10 +348,6 @@ const heroVars = e => e.focus != null ? ` style="--focus:${e.focus}%"` : "";
 // единственное место, где собирается атрибут кадра-заглушки — и для записи, и для клипа.
 // значение в апострофах: так во всём исходнике сборки не остаётся жадного атрибута
 // кадра-заглушки, и grep-сторож ловит ровно его, а не собственный data-poster
-// адрес медиа в разметке: имя файла кодируется посегментно. Без этого «probe#1.jpg»
-// уезжал в src как есть, и браузер просил «media/probe», считая остаток фрагментом, —
-// файл на сервере лежал, а кадр не показывался. Внешние ссылки не трогаем: они уже URL
-const mediaUrl = p => /^https?:\/\//.test(p) ? p : String(p).split("/").map(encodeURIComponent).join("/");
 const dataPoster = url => url ? ` data-poster='${esc(mediaUrl(url)).replace(/'/g, "%27")}'` : "";
 
 // --h: во что обойдётся запись по высоте, в svh. Пока запись не отрисована,
