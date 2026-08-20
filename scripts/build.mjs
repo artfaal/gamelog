@@ -42,7 +42,9 @@ const NARROW = "(max-width: 48rem)";
 // .gitignore и README. Третий формат добавляется сразу во всех четырёх местах, иначе
 // он разрешён сборкой, но обходит проверку веса и может уехать в git
 const VIDEO_EXT = /\.(webm|mp4)$/i;
-const isVideo = p => VIDEO_EXT.test(String(p).split(/[?#]/)[0]);
+// у внешней ссылки расширение прячется за ?query и #fragment, у локального файла
+// решётка — часть имени: «probe#1.mp4» иначе переставал быть видео
+const isVideo = p => VIDEO_EXT.test(/^https?:\/\//.test(String(p)) ? String(p).split(/[?#]/)[0] : String(p));
 // ||спойлер|| → кнопка-блюр (до markdown; содержимое скрыто от SR до раскрытия)
 const spoilers = md => md.replace(/\|\|([^|]+)\|\|/g,
   '<button type="button" class="spoiler" aria-label="Спойлер — показать"><span aria-hidden="true">$1</span></button>');
@@ -572,7 +574,7 @@ const hours = entries.reduce((s, e) => s + (typeof e.fm.hours === "number" ? e.f
 const preloadLcp = !entries[0] ? "" : [
   entries[0].poster ? [entries[0].poster, ` media="${NARROW}"`] : null,
   [entries[0].hero, entries[0].poster ? ' media="(min-width: 48.0625rem)"' : ""],
-].filter(Boolean).map(([u, m]) => `<link rel="preload" href="${esc(u)}" as="image"${m}>`).join("\n");
+].filter(Boolean).map(([u, m]) => `<link rel="preload" href="${esc(mediaUrl(u))}" as="image"${m}>`).join("\n");
 
 const page = `<!doctype html>
 <html lang="ru">
@@ -584,7 +586,7 @@ const page = `<!doctype html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Хроника — игровой дневник">
 <meta property="og:description" content="Игры заканчиваются. Воспоминания — нет.">
-${ogImage ? `<meta property="og:image" content="${esc(abs(ogImage))}">
+${ogImage ? `<meta property="og:image" content="${esc(abs(mediaUrl(ogImage)))}">
 <meta property="og:image:alt" content="${esc(ogAlt)}">` : ""}
 <meta property="og:url" content="${SITE}/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -668,7 +670,7 @@ const stub = e => `<!doctype html>
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(e.name)} · Хроника">
 <meta property="og:description" content="${esc(ogDesc(e))}">
-<meta property="og:image" content="${esc(abs(e.hero))}">
+<meta property="og:image" content="${esc(abs(mediaUrl(e.hero)))}">
 <meta property="og:image:alt" content="Обложка: ${esc(e.name)}">
 <meta property="og:url" content="${SITE}/e/${esc(e.slug)}/">
 <meta http-equiv="refresh" content="0; url=/#${esc(e.slug)}">
