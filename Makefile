@@ -1,4 +1,4 @@
-# gamelog: check — линт; build — прод-сборка; drafts — черновики; serve — просмотр;
+# gamelog: check — линт; test — проверки связок и разбора кадров; build — прод-сборка; drafts — черновики; serve — просмотр;
 # deploy — на orion; hours — сверка часов со Steam; suggest — кандидаты в дневник;
 # timeline — когда играл, по ачивкам;
 # video/image — проверка клипов и кадров по политике; jitter — замер дёрганья ленты;
@@ -7,6 +7,11 @@ DEPLOY_DEST ?= orion.artfaal.ru:/var/docker/compose/gamelog/data/
 
 check:
 	npm run lint
+
+# проверки тонких мест, которых нет в живом контенте: подписи связок между заходами
+# и разбор размеров картинки. Всё остальное проверяет сборка на реальных записях
+test:
+	@node --test scripts/test.mjs
 
 build: check
 	node scripts/build.mjs
@@ -62,4 +67,4 @@ jitter:
 refresh:
 	@node scripts/refresh.mjs --all
 
-.PHONY: check build drafts serve deploy hours suggest timeline video video-fix image jitter refresh
+.PHONY: check test build drafts serve deploy hours suggest timeline video video-fix image jitter refresh

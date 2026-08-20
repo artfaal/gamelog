@@ -9,6 +9,7 @@ import { marked } from "marked";
 import { LIMITS } from "./video-policy.mjs";
 import { posterSmallOf } from "./steam-app.mjs";
 import { imageSize } from "./image-size.mjs";
+import { gameKey, firstRun, siblingLabel } from "./siblings.mjs";
 
 const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
@@ -277,20 +278,11 @@ for (const e of entries) {
   for (const m of e.moments) if (m.shot) m.shot = await localize(m.shot, id);
 }
 
-// связки заходов одной игры: общий ключ = steam appid | fm.game | slug.
-// String() обязателен: YAML отдаёт `steam: 668580` числом, а `steam: "668580"` строкой —
-// кэш у них общий, а связка без приведения молча не находилась
-const gameKey = e => String(e.fm.steam ?? e.fm.game ?? e.slug);
+// связки заходов одной игры: правило выбора и подписи живут в scripts/siblings.mjs —
+// живого контента с повторными заходами сейчас нет, и проверяются они тестами
 for (const e of entries) {
   e.siblings = entries.filter(o => o !== e && gameKey(o) === gameKey(e));
-  // «первый заход» говорится только про действительно первый: при трёх заходах
-  // любой ранний сосед иначе назывался бы первым. Дата решает, слаг разрешает ничью —
-  // без второго ключа две записи одного дня считали первой каждая себя, и одна и та же
-  // ссылка получала в разных карточках разные подписи
-  e.firstOfGame = [e, ...e.siblings]
-    .filter(o => !o.playing)
-    .sort((a, b) => String(a.fm.finished).localeCompare(String(b.fm.finished))
-      || a.slug.localeCompare(b.slug))[0] ?? null;
+  e.firstOfGame = firstRun([e, ...e.siblings]);
 }
 
 // ---------- рендер ----------
@@ -331,18 +323,7 @@ const metaLine = e => {
   if (e.fm.hours !== TBD) parts.push(`<span class="chip chip--hours">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
   if (e.fm.platform) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
-    const year = String(s.fm.finished).slice(0, 4);
-    let label;
-    // связка называет исход соседнего захода и его место во времени. «Отложил» —
-    // такой же исход, как дроп и прохождение (README, «Сейчас играю и „пока не знаю“»),
-    // и без своей ветки отложенный заход подписывался «прошёл». Дроп тоже сверяется
-    // с датой: «первый заход» врёт, если он случился позже нынешнего
-    const позже = s.fm.finished > e.fm.finished;
-    const первый = e.firstOfGame === s;
-    if (s.playing) label = "сейчас играю";
-    else if (s.dropped) label = позже ? `потом дропнул в ${year}` : `${первый ? "первый заход — дроп" : "дроп"} в ${year}`;
-    else if (s.paused) label = позже ? `вернулся и отложил в ${year}` : `отложил в ${year}`;
-    else label = позже ? `вернулся и прошёл в ${year}` : `прошёл в ${year}`;
+    const label = siblingLabel(s, e, e.firstOfGame === s);
     parts.push(`<a class="chip chip--link" href="#${s.slug}">${label} ↗</a>`);
   }
   // есть appid — даём читателю прямой путь на страницу игры в магазине
