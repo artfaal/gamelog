@@ -10,6 +10,7 @@ import { LIMITS } from "./video-policy.mjs";
 import { posterSmallOf } from "./steam-app.mjs";
 import { imageSize } from "./image-size.mjs";
 import { gameKey, firstRun, siblingLabel } from "./siblings.mjs";
+import { ruHours, ruGames, ruScore } from "./ru.mjs";
 
 const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
@@ -26,18 +27,6 @@ const ruDate = iso => {
   const [y, m, d] = String(iso).split("-").map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
 };
-// разряды режем узким неразрывным пробелом: часы растут ~500 в год, «1472 ч» читается хуже
-const ruNum = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F");
-const plural = (n, one, few, many) => {
-  const m10 = n % 10, m100 = n % 100;
-  return `${ruNum(n)} ${(m100 >= 11 && m100 <= 14) ? many : m10 === 1 ? one : (m10 >= 2 && m10 <= 4) ? few : many}`;
-};
-const ruHours = n => plural(n, "час", "часа", "часов");
-const ruGames = n => plural(n, "игра", "игры", "игр");
-// оценка бывает половинной: 8.5 → 8,5. Запятую не двигаем — цифры Cormorant
-// свисают ниже строки по-разному (7 и 9 да, 8 и 6 нет), и любой сдвиг ровен
-// для одной пары и кривой для другой
-const ruScore = n => String(n).replace(".", ",");
 // tbd — «пока неизвестно»: годится для finished, hours и score
 const TBD = "tbd";
 // Steam кладёт в жанры и то, что жанром не является: «Early Access» — стадия

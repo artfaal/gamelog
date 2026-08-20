@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { deflateSync, crc32 } from "node:zlib";
 import { imageSize } from "./image-size.mjs";
 import { firstRun, siblingLabel } from "./siblings.mjs";
+import { ruHours } from "./ru.mjs";
 
 const dir = mkdtempSync(`${tmpdir()}/gamelog-test-`);
 
@@ -101,6 +102,18 @@ test("огрызок SOF с невозможной длиной сегмента
   const b = Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x01, 0x08, 0x01, 0xc8, 0x00, 0x7b, 0x03]);
   writeFileSync(file, b);
   assert.equal(imageSize(file), null);
+});
+
+// ---------- русские числа ----------
+
+test("часы: склонение и запятая в дробях", () => {
+  const пары = [
+    [1, "1 час"], [2, "2 часа"], [5, "5 часов"], [11, "11 часов"], [21, "21 час"],
+    [100, "100 часов"], [0, "0 часов"],
+    // дробь идёт с родительным единственного, разделитель — запятая, как и в оценке
+    [0.5, "0,5 часа"], [1.5, "1,5 часа"], [41.5, "41,5 часа"],
+  ];
+  for (const [n, ждём] of пары) assert.equal(ruHours(n), ждём);
 });
 
 // ---------- подписи связок между заходами ----------
