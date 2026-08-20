@@ -446,21 +446,47 @@ lb.addEventListener("close", () => {
     const el = e.target;
     wake.unobserve(el);
     if (el.tagName === "VIDEO") el.poster = el.dataset.poster;
-    else if (el.tagName === "IMG") el.src = el.dataset.src;
-    else el.style.setProperty("--poster", `url('${el.dataset.poster}')`);
+    else if (el.tagName === "IMG") {
+      // сперва <source> своей записи, потом сам кадр: иначе браузер успеет взять
+      // широкий hero и следом переключиться на постер — две загрузки вместо одной
+      const stage = el.closest("article.stage");
+      if (stage) for (const s of stage.querySelectorAll("picture source[data-srcset]")) {
+        s.srcset = s.dataset.srcset;
+        delete s.dataset.srcset;
+      }
+      el.src = el.dataset.src;
+    } else el.style.setProperty("--poster", `url('${el.dataset.poster}')`);
   }), { rootMargin: "50% 0px" });
   document.querySelectorAll("article.stage[data-poster], video.clip[data-poster]").forEach(el => wake.observe(el));
 
-  // кадры первой записи: loading="lazy" в разметке остаётся, но Chrome тянет lazy-картинку
-  // ещё за ~1250 px до экрана, а пара кадров первой записи лежит ближе — и приезжает
-  // на первый экран мегабайтами. Снимаем у неё адрес до первой раскладки и возвращаем
-  // на подходе, тем же наблюдателем. Дальше по ленте порог браузера уже никого не
-  // достаёт, там кадры остаются на нативном lazy и живут без JS
-  document.querySelector("article.stage")?.querySelectorAll("img.shot").forEach(img => {
-    img.dataset.src = img.getAttribute("src");
-    img.removeAttribute("src");
-    wake.observe(img);
-  });
+  // Гейт загрузки: адрес снимается у всех кадров дальних записей и возвращается на
+  // подходе. Раньше эту работу делал content-visibility — нерисуемое поддерево не будило
+  // lazy-картинки, — но он же и был причиной рывка: пока запись не разложена, её место
+  // держит заглушка, а в момент раскладки настоящая высота сдвигает всё, что ниже.
+  // При чтении снизу вверх это происходит ВЫШЕ вьюпорта, и Safari, в отличие от Chrome,
+  // такой сдвиг не компенсирует — лента дёргается под пальцем на сотни пикселей
+  // (замерено на живой ленте: 764, 434, 378 px). Теперь высота записи известна сразу
+  // и не меняется, а трафик держит этот гейт.
+  //
+  // Первая запись остаётся с адресами: она на экране, и снимать их — значит показать
+  // читателю пустой кадр. Кадры сюда попадают вместе с обоями: у обоев размер задан
+  // стилями (.hero — 100svh), у кадров — атрибутами width/height, поэтому снятый адрес
+  // геометрию не двигает
+  const stages = [...document.querySelectorAll("article.stage")];
+  for (const stage of stages.slice(1)) {
+    for (const img of stage.querySelectorAll("img.shot, img.bg, img.logo")) {
+      const src = img.getAttribute("src");
+      if (!src) continue;
+      img.dataset.src = src;
+      img.removeAttribute("src");
+      wake.observe(img);
+    }
+    // <source> узкого экрана: постер приезжает тем же путём, что и остальное
+    for (const src of stage.querySelectorAll("picture source[srcset]")) {
+      src.dataset.srcset = src.getAttribute("srcset");
+      src.removeAttribute("srcset");
+    }
+  }
 
   // постеры полки: она в <dialog>, до открытия не грузится ни одна lazy-картинка — и сетка
   // собиралась на глазах у читателя. Будим в простой, но не раньше первого движения по ленте:
