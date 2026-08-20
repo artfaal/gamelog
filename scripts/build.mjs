@@ -284,10 +284,13 @@ const gameKey = e => String(e.fm.steam ?? e.fm.game ?? e.slug);
 for (const e of entries) {
   e.siblings = entries.filter(o => o !== e && gameKey(o) === gameKey(e));
   // «первый заход» говорится только про действительно первый: при трёх заходах
-  // или одинаковых датах любой ранний сосед иначе назывался бы первым
+  // любой ранний сосед иначе назывался бы первым. Дата решает, слаг разрешает ничью —
+  // без второго ключа две записи одного дня считали первой каждая себя, и одна и та же
+  // ссылка получала в разных карточках разные подписи
   e.firstOfGame = [e, ...e.siblings]
     .filter(o => !o.playing)
-    .reduce((a, o) => (a && String(a.fm.finished) <= String(o.fm.finished) ? a : o), null);
+    .sort((a, b) => String(a.fm.finished).localeCompare(String(b.fm.finished))
+      || a.slug.localeCompare(b.slug))[0] ?? null;
 }
 
 // ---------- рендер ----------

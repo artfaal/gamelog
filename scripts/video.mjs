@@ -23,7 +23,11 @@ const probe = file => {
   }
   const [w, h, rate, dur] = out;
   const [num, den] = rate.split("/").map(Number);
-  return { w: Number(w), h: Number(h), fps: num / (den || 1), sec: Number(dur) };
+  const sec = Number(dur);
+  // ffprobe отдаёт N/A на потоках без длительности: Number() даёт NaN, все сравнения
+  // становятся ложными, и клип уходил в отчёт зелёным с «NaN с · NaN МБ/с»
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  return { w: Number(w), h: Number(h), fps: num / (den || 1), sec };
 };
 
 const probeRaw = file => {
@@ -61,6 +65,19 @@ const faststart = file => {
   } finally { closeSync(fd); }
 };
 
+// Метём только при --fix (без него скрипт обещает лишь отчёт) и только огрызки мёртвых
+// прогонов: pid в имени и проверка, что процесс уже не живёт. Иначе параллельный
+// video-fix потерял бы файл прямо из-под себя
+const alive = pid => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === "EPERM"; } };
+if (FIX) {
+  for (const o of readdirSync(DIR)) {
+    const m = /\.faststart-(\d+)\.part$/.exec(o);
+    if (!m || alive(Number(m[1]))) continue;
+    rmSync(`${DIR}/${o}`, { force: true });
+    console.log(`убран огрызок мёртвого прогона: ${o}`);
+  }
+}
+
 const files = readdirSync(DIR).filter(f => /\.(mp4|webm)$/i.test(f)).sort();
 if (!files.length) { console.log("клипов нет"); process.exit(0); }
 
@@ -83,11 +100,6 @@ for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => {
   for (const t of tmps) if (existsSync(t)) rmSync(t, { force: true });
   process.exit(130);
 });
-const orphans = readdirSync(DIR).filter(f => /\.faststart-\d+\.part$/.test(f));
-for (const o of orphans) {
-  rmSync(`${DIR}/${o}`, { force: true });
-  console.log(`убран огрызок прошлого прогона: ${o}`);
-}
 
 let bad = 0, fixed = 0;
 for (const name of files) {
@@ -124,7 +136,7 @@ for (const name of files) {
         // -map 0: без него ffmpeg берёт по одной дорожке каждого типа, и вторая звуковая
         // или субтитры молча пропадают — это уже не «переупаковка без пережатия»
         execFileSync("ffmpeg", ["-v", "error", "-i", file, "-map", "0", "-c", "copy",
-          "-movflags", "+faststart", "-f", "mp4", tmp]);
+          "-movflags", "+faststart", "-f", "mp4", tmp], { stdio: ["ignore", "pipe", "pipe"] });
         // файл мог смениться, пока шёл ремукс: rename затёр бы чужую свежую версию старой
         const after = statSync(file);
         if (after.mtimeMs !== before.mtimeMs || after.size !== before.size) {
@@ -135,6 +147,10 @@ for (const name of files) {
           fs = true;
           fixed++;
         }
+      } catch (err) {
+        // без catch падение ffmpeg на одном файле обрывало весь отчёт стектрейсом,
+        // и остальные клипы не проверялись вовсе
+        gripes.push(`ffmpeg не смог переупаковать (${String(err.message).split("\n")[0]})`);
       } finally {
         if (existsSync(tmp)) rmSync(tmp, { force: true });
         tmps.delete(tmp);
@@ -147,8 +163,10 @@ for (const name of files) {
   if (!gripes.length) { console.log(`ок   ${name.padEnd(22)} ${mb.toFixed(1)} МБ · ${v.sec.toFixed(0)} с · ${perSec.toFixed(2)} МБ/с`); continue; }
   bad++;
   console.log(`✗    ${name.padEnd(22)} ${gripes.join("; ")}`);
-  if (perSec > LIMITS.mbPerSecond || v.w > LIMITS.width || v.fps > LIMITS.fps + 0.5) {
-    console.log(`       ffmpeg -i ИСХОДНИК -vf "scale='min(${LIMITS.width},iw)':-2,fps=${LIMITS.fps}" \\`);
+  if (perSec > LIMITS.mbPerSecond || v.w > LIMITS.width || v.h > LIMITS.height || v.fps > LIMITS.fps + 0.5) {
+    // ужимаем по обеим сторонам: 'min(W,iw)':-2 не спасает портрет 1080×1920 и 1920×1200,
+    // а force_original_aspect_ratio держит пропорции и не растягивает мелкое до предела
+    console.log(`       ffmpeg -i ИСХОДНИК -vf "scale=${LIMITS.width}:${LIMITS.height}:force_original_aspect_ratio=decrease,fps=${LIMITS.fps}" \\`);
     console.log(`         -c:v libx264 -crf 23 -maxrate ${LIMITS.maxrateMbit}M -bufsize ${LIMITS.maxrateMbit * 2}M \\`);
     console.log(`         -preset slow -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart ${file}`);
   }

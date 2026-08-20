@@ -12,15 +12,27 @@ import { readFileSync } from "node:fs";
 export const imageSize = file => {
   let buf;
   try { buf = readFileSync(file); } catch { return null; }
-  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47)
-    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  // png: полная восьмибайтовая сигнатура и IHDR первым чанком, иначе это не png
+  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47 && buf.readUInt32BE(4) === 0x0d0a1a0a
+      && buf.toString("latin1", 12, 16) === "IHDR") {
+    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+    return w && h ? { w, h } : null;
+  }
   if (buf.length < 4 || buf.readUInt16BE(0) !== 0xffd8) return null;
   for (let i = 2; i + 9 < buf.length;) {
     if (buf[i] !== 0xff) { i++; continue; }
+    // перед маркером допускается сколько угодно байтов-заполнителей 0xFF (ITU-T T.81):
+    // без пропуска пара FF FF читалась как сегмент с длиной, и валидный jpeg объявлялся
+    // нечитаемым — кадр уезжал в разметку без размеров и двигал раскладку
+    let j = i;
+    while (j + 1 < buf.length && buf[j + 1] === 0xff) j++;
+    i = j;
     const marker = buf[i + 1];
     // SOF0…SOF15 несут размеры кадра; C4/C8/CC — таблицы, не рамка
-    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker))
-      return { w: buf.readUInt16BE(i + 7), h: buf.readUInt16BE(i + 5) };
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      const w = buf.readUInt16BE(i + 7), h = buf.readUInt16BE(i + 5);
+      return w && h ? { w, h } : null;   // нулевая сторона (высота из DNL) — не размеры
+    }
     if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; }
     i += 2 + buf.readUInt16BE(i + 2);
   }
