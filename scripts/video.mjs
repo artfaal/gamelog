@@ -64,12 +64,20 @@ const faststart = file => {
 const files = readdirSync(DIR).filter(f => /\.(mp4|webm)$/i.test(f)).sort();
 if (!files.length) { console.log("клипов нет"); process.exit(0); }
 
-// сигнал минует finally, и недописанный .part остался бы лежать среди клипов
+// Ctrl-C во время ffmpeg обработчиком не перехватить: execFileSync держит поток, и
+// callback вызовется в лучшем случае после его возврата. Поэтому уборка двойная:
+// обработчик — для сигнала, пришедшего между файлами, и подметание осиротевших .part
+// в начале прогона — для всего, что пережило предыдущее убийство
 const tmps = new Set();
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => {
   for (const t of tmps) if (existsSync(t)) rmSync(t, { force: true });
   process.exit(130);
 });
+const orphans = readdirSync(DIR).filter(f => /\.faststart-\d+\.part$/.test(f));
+for (const o of orphans) {
+  rmSync(`${DIR}/${o}`, { force: true });
+  console.log(`убран огрызок прошлого прогона: ${o}`);
+}
 
 let bad = 0, fixed = 0;
 for (const name of files) {
@@ -93,33 +101,37 @@ for (const name of files) {
   if (!fs && FIX) {
     // временный файл: расширение НЕ клиповое (иначе следующий прогон посчитает огрызок
     // ещё одним клипом, а «foo.mp4.faststart.mp4» — вполне законное имя чужого файла,
-    // который ffmpeg -y снёс бы молча). Контейнер задаём флагом, а не суффиксом;
-    // занятое имя — отказ, а не перезапись
+    // который ffmpeg -y снёс бы молча). Контейнер задаём флагом, а не суффиксом.
+    // Нарушение здесь только помечается: считает его общая ветка ниже по !fs, а свой
+    // bad++ давал бы «не по политике: 2 из 1»
     const tmp = `${file}.faststart-${process.pid}.part`;
-    if (existsSync(tmp)) { console.log(`✗ ${name.padEnd(22)} ${tmp} уже занят — не трогаю`); bad++; continue; }
-    const before = statSync(file);
-    tmps.add(tmp);                              // на случай Ctrl-C, см. обработчик ниже
-    try {
-      // -map 0: без него ffmpeg берёт по одной дорожке каждого типа, и вторая звуковая
-      // или субтитры молча пропадают — это уже не «переупаковка без пережатия»
-      execFileSync("ffmpeg", ["-v", "error", "-i", file, "-map", "0", "-c", "copy",
-        "-movflags", "+faststart", "-f", "mp4", tmp]);
-      // файл мог смениться, пока шёл ремукс: rename затёр бы чужую свежую версию старой
-      const after = statSync(file);
-      if (after.mtimeMs !== before.mtimeMs || after.size !== before.size) {
-        console.log(`✗ ${name.padEnd(22)} изменился во время работы — не трогаю`);
-        bad++;
-      } else {
-        chmodSync(tmp, before.mode);            // права исходника, а не 0644 от ffmpeg
-        renameSync(tmp, file);
-        fs = true;
-        fixed++;
+    if (existsSync(tmp)) {
+      gripes.push(`${tmp} уже занят — не трогал`);
+    } else {
+      const before = statSync(file);
+      tmps.add(tmp);
+      try {
+        // -map 0: без него ffmpeg берёт по одной дорожке каждого типа, и вторая звуковая
+        // или субтитры молча пропадают — это уже не «переупаковка без пережатия»
+        execFileSync("ffmpeg", ["-v", "error", "-i", file, "-map", "0", "-c", "copy",
+          "-movflags", "+faststart", "-f", "mp4", tmp]);
+        // файл мог смениться, пока шёл ремукс: rename затёр бы чужую свежую версию старой
+        const after = statSync(file);
+        if (after.mtimeMs !== before.mtimeMs || after.size !== before.size) {
+          gripes.push("изменился во время работы — не трогал");
+        } else {
+          chmodSync(tmp, before.mode);          // права исходника, а не 0644 от ffmpeg
+          renameSync(tmp, file);
+          fs = true;
+          fixed++;
+        }
+      } finally {
+        if (existsSync(tmp)) rmSync(tmp, { force: true });
+        tmps.delete(tmp);
       }
-    } finally {
-      if (existsSync(tmp)) rmSync(tmp, { force: true });
-      tmps.delete(tmp);
     }
   }
+
   if (!fs) gripes.push("moov в конце — нет faststart");
 
   if (!gripes.length) { console.log(`ок   ${name.padEnd(22)} ${mb.toFixed(1)} МБ · ${v.sec.toFixed(0)} с · ${perSec.toFixed(2)} МБ/с`); continue; }
