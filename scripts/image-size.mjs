@@ -12,9 +12,10 @@ import { readFileSync } from "node:fs";
 export const imageSize = file => {
   let buf;
   try { buf = readFileSync(file); } catch { return null; }
-  // png: полная восьмибайтовая сигнатура и IHDR первым чанком, иначе это не png
+  // png: полная сигнатура, IHDR первым чанком и его единственно возможная длина 13.
+  // Без длины подделка «сигнатура + IHDR + любые числа» читалась как размеры
   if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47 && buf.readUInt32BE(4) === 0x0d0a1a0a
-      && buf.toString("latin1", 12, 16) === "IHDR") {
+      && buf.readUInt32BE(8) === 13 && buf.toString("latin1", 12, 16) === "IHDR") {
     const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
     return w && h ? { w, h } : null;
   }
@@ -27,14 +28,23 @@ export const imageSize = file => {
     let j = i;
     while (j + 1 < buf.length && buf[j + 1] === 0xff) j++;
     i = j;
+    if (i + 1 >= buf.length) break;
     const marker = buf[i + 1];
     // SOF0…SOF15 несут размеры кадра; C4/C8/CC — таблицы, не рамка
     if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      // рамка не короче восьми байт: длина, точность, две стороны и число компонентов.
+      // Огрызок с невозможной длиной иначе читался как убедительные размеры
+      if (i + 9 > buf.length || buf.readUInt16BE(i + 2) < 8) return null;
       const w = buf.readUInt16BE(i + 7), h = buf.readUInt16BE(i + 5);
       return w && h ? { w, h } : null;   // нулевая сторона (высота из DNL) — не размеры
     }
     if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; }
-    i += 2 + buf.readUInt16BE(i + 2);
+    // длину сегмента читаем только если она целиком в буфере: усечённый файл
+    // с хвостом 0xFF доводил i до конца, и чтение падало ERR_OUT_OF_RANGE
+    if (i + 4 > buf.length) break;
+    const len = buf.readUInt16BE(i + 2);
+    if (len < 2) break;                  // сегмент короче собственной длины — дальше мусор
+    i += 2 + len;
   }
   return null;
 };

@@ -24,10 +24,13 @@ const probe = file => {
   const [w, h, rate, dur] = out;
   const [num, den] = rate.split("/").map(Number);
   const sec = Number(dur);
-  // ffprobe отдаёт N/A на потоках без длительности: Number() даёт NaN, все сравнения
-  // становятся ложными, и клип уходил в отчёт зелёным с «NaN с · NaN МБ/с»
-  if (!Number.isFinite(sec) || sec <= 0) return null;
-  return { w: Number(w), h: Number(h), fps: num / (den || 1), sec };
+  const size = { w: Number(w), h: Number(h) };
+  const fps = num / (den || 1);
+  // ffprobe отдаёт N/A на потоках без длительности и 0/0 на кадровой частоте: Number()
+  // даёт NaN или ноль, все сравнения с порогами становятся ложными, и клип уходил
+  // в отчёт зелёным с «NaN с · NaN МБ/с». Разбор без внятных чисел — не разбор
+  if (![sec, size.w, size.h, fps].every(n => Number.isFinite(n) && n > 0)) return null;
+  return { ...size, fps, sec };
 };
 
 const probeRaw = file => {
@@ -166,7 +169,9 @@ for (const name of files) {
   if (perSec > LIMITS.mbPerSecond || v.w > LIMITS.width || v.h > LIMITS.height || v.fps > LIMITS.fps + 0.5) {
     // ужимаем по обеим сторонам: 'min(W,iw)':-2 не спасает портрет 1080×1920 и 1920×1200,
     // а force_original_aspect_ratio держит пропорции и не растягивает мелкое до предела
-    console.log(`       ffmpeg -i ИСХОДНИК -vf "scale=${LIMITS.width}:${LIMITS.height}:force_original_aspect_ratio=decrease,fps=${LIMITS.fps}" \\`);
+    // min по обеим сторонам, чтобы мелкий клип не растянуло до предела; decrease держит
+    // пропорции; force_divisible_by=2 — libx264 с yuv420p не берёт нечётную сторону
+    console.log(`       ffmpeg -i ИСХОДНИК -vf "scale='min(${LIMITS.width},iw)':'min(${LIMITS.height},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,fps=${LIMITS.fps}" \\`);
     console.log(`         -c:v libx264 -crf 23 -maxrate ${LIMITS.maxrateMbit}M -bufsize ${LIMITS.maxrateMbit * 2}M \\`);
     console.log(`         -preset slow -pix_fmt yuv420p -c:a aac -b:a 96k -movflags +faststart ${file}`);
   }

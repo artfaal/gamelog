@@ -11,7 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { writeFileSync, readFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { execFileSync } from "node:child_process";
+import { deflateSync, crc32 } from "node:zlib";
 import { imageSize } from "./image-size.mjs";
 import { firstRun, siblingLabel } from "./siblings.mjs";
 
@@ -19,12 +19,10 @@ const dir = mkdtempSync(`${tmpdir()}/gamelog-test-`);
 
 // ---------- размеры картинки ----------
 
-test("jpeg: размеры совпадают с ffprobe", () => {
-  const file = "content/media/cd-cats.jpg";
-  const out = execFileSync("ffprobe", ["-v", "error", "-select_streams", "v:0",
-    "-show_entries", "stream=width,height", "-of", "default=nw=1:nk=1", file], { encoding: "utf8" });
-  const [w, h] = out.trim().split("\n").map(Number);
-  assert.deepEqual(imageSize(file), { w, h });
+test("jpeg: размеры настоящего кадра из репозитория", () => {
+  // файл лежит в git и не меняется; ждать ответа от ffprobe нельзя — тогда результат
+  // теста зависел бы от версии ffmpeg на машине (одна отдаёт 77×99, другая 76×98)
+  assert.deepEqual(imageSize("content/media/cd-cats.jpg"), { w: 739, h: 415 });
 });
 
 test("jpeg: байт-заполнитель 0xFF перед маркером не ломает разбор", () => {
@@ -59,11 +57,50 @@ test("не картинка и обрубки: null, а не выдуманны�
   }
 });
 
+// минимальный настоящий png собираем сами — без внешних инструментов и их версий
+const png = (w, h, { ihdrLen = 13 } = {}) => {
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(type === "IHDR" ? ihdrLen : data.length);
+    const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body) >>> 0);
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4);
+  ihdr[8] = 8; ihdr[9] = 0;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(Buffer.alloc(w * h + h))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+};
+
 test("png: размеры из IHDR", () => {
   const file = `${dir}/probe.png`;
-  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "color=c=red:s=77x99",
-    "-frames:v", "1", file]);
+  writeFileSync(file, png(77, 99));
   assert.deepEqual(imageSize(file), { w: 77, h: 99 });
+});
+
+test("png: подделка с неверной длиной IHDR не считается картинкой", () => {
+  const file = `${dir}/fake-ihdr.png`;
+  writeFileSync(file, png(123, 456, { ihdrLen: 0 }));
+  assert.equal(imageSize(file), null);
+});
+
+test("усечённый jpeg с хвостом 0xFF не роняет разбор", () => {
+  const file = `${dir}/tail.jpg`;
+  writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xd8]), Buffer.alloc(64, 0xff)]));
+  assert.equal(imageSize(file), null);
+});
+
+test("огрызок SOF с невозможной длиной сегмента — не размеры", () => {
+  const file = `${dir}/bad-sof.jpg`;
+  const b = Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x01, 0x08, 0x01, 0xc8, 0x00, 0x7b, 0x03]);
+  writeFileSync(file, b);
+  assert.equal(imageSize(file), null);
 });
 
 // ---------- подписи связок между заходами ----------

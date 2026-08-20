@@ -41,7 +41,9 @@ for (const name of files) {
   if (!gripes.length) { console.log(`ок   ${name.padEnd(22)} ${facts}`); continue; }
   bad++;
   console.log(`✗    ${name.padEnd(22)} ${gripes.join("; ")}`);
-  console.log(`       ffmpeg -i ИСХОДНИК -vf "scale='min(${LIMITS.width},iw)':-2" \\`);
+  // min по обеим сторонам: проверка ругается и на высокий кадр, а 'min(W,iw)':-2
+  // портретный 1080×1920 оставлял как есть
+  console.log(`       ffmpeg -i ИСХОДНИК -vf "scale='min(${LIMITS.width},iw)':'min(${LIMITS.height},ih)':force_original_aspect_ratio=decrease" \\`);
   if (png) {
     // -compression_level 100 — только zlib, пиксели и прозрачность целы
     console.log(`         -compression_level 100 ${file}`);
