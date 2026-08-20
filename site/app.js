@@ -446,7 +446,21 @@ lb.addEventListener("close", () => {
     const el = e.target;
     wake.unobserve(el);
     if (el.tagName === "VIDEO") el.poster = el.dataset.poster;
-    else if (el.tagName === "IMG") {
+    else if (el.tagName === "ARTICLE") {
+      // адреса обоев и логотипа возвращает запись, а не они сами: на узком экране
+      // логотип скрыт, его бокс нулевой, и пересечения по нему не случилось бы никогда.
+      // Сперва <source>, потом сам кадр — иначе браузер успеет взять широкий hero
+      // и следом переключиться на постер, то есть загрузит дважды
+      for (const src of el.querySelectorAll("picture source[data-srcset]")) {
+        src.srcset = src.dataset.srcset;
+        delete src.dataset.srcset;
+      }
+      for (const img of el.querySelectorAll("img.bg[data-src], img.logo[data-src]")) {
+        img.src = img.dataset.src;
+        delete img.dataset.src;
+      }
+      if (el.dataset.poster) el.style.setProperty("--poster", `url('${el.dataset.poster}')`);
+    } else if (el.tagName === "IMG") {
       // сперва <source> своей записи, потом сам кадр: иначе браузер успеет взять
       // широкий hero и следом переключиться на постер — две загрузки вместо одной
       const stage = el.closest("article.stage");
@@ -455,9 +469,9 @@ lb.addEventListener("close", () => {
         delete s.dataset.srcset;
       }
       el.src = el.dataset.src;
-    } else el.style.setProperty("--poster", `url('${el.dataset.poster}')`);
+    }
   }), { rootMargin: "50% 0px" });
-  document.querySelectorAll("article.stage[data-poster], video.clip[data-poster]").forEach(el => wake.observe(el));
+  document.querySelectorAll("article.stage, video.clip[data-poster]").forEach(el => wake.observe(el));
 
   // Гейт загрузки: адрес снимается у всех кадров дальних записей и возвращается на
   // подходе. Раньше эту работу делал content-visibility — нерисуемое поддерево не будило
@@ -474,14 +488,16 @@ lb.addEventListener("close", () => {
   // геометрию не двигает
   const stages = [...document.querySelectorAll("article.stage")];
   for (const stage of stages.slice(1)) {
-    for (const img of stage.querySelectorAll("img.shot, img.bg, img.logo")) {
+    for (const img of stage.querySelectorAll("img.shot, img.bg, img.logo, .body img")) {
       const src = img.getAttribute("src");
       if (!src) continue;
       img.dataset.src = src;
       img.removeAttribute("src");
-      wake.observe(img);
+      // обои и логотип разбудит сама запись (её наблюдает wake по data-poster):
+      // у логотипа на узком экране нулевой бокс, пересечения по нему не бывает
+      if (!img.matches("img.bg, img.logo")) wake.observe(img);
     }
-    // <source> узкого экрана: постер приезжает тем же путём, что и остальное
+    // <source> узкого экрана: постер приезжает вместе со своей записью
     for (const src of stage.querySelectorAll("picture source[srcset]")) {
       src.dataset.srcset = src.getAttribute("srcset");
       src.removeAttribute("srcset");
@@ -495,41 +511,9 @@ lb.addEventListener("close", () => {
   const warmShelf = () => idle(() =>
     document.querySelectorAll("#shelf-list img[loading]").forEach(img => { img.loading = "eager"; }));
 
-  // обои следующей записи: запись вне экрана не раскладывается (content-visibility: auto),
-  // а нативный loading="lazy" будит её арт у самой кромки вьюпорта — и на стыке читатель
-  // видел пустое полотно вместо кадра. Будим за запись вперёд и тем же приёмом, что полку:
-  // сменой атрибута. <link rel="preload"> тянул бы арт немедленно и мимо всех гейтов —
-  // ровно тот дефект, который лечила волна 1, снимая жадный poster= у <video>.
-  // Наблюдаем запись, а будим соседнюю: считать расстояние до внеэкранной записи нечем —
-  // её содержимое не разложено, и наблюдатель на самой картинке не сработал бы
-  const bgs = new IntersectionObserver(es => es.forEach(e => {
-    if (!e.isIntersecting) return;
-    bgs.unobserve(e.target);
-    const img = e.target.nextElementSibling?.querySelector?.("img.bg[loading]");
-    if (img) img.loading = "eager";
-  }), { rootMargin: "100% 0px" });
-  const warmBg = () => document.querySelectorAll("article.stage").forEach(a => bgs.observe(a));
-
-  // раскладка записи заранее: у всех записей заглушка одна (250svh = 2125 px на телефоне),
-  // а занимают они от 1747 до 4267 — и в момент раскладки разница сдвигает всё, что ниже.
-  // Когда этот момент наступит, решает движок: Chrome берёт запас около 1200 px, Safari
-  // раскладывает прямо в кадре, поэтому дёргалось только в нём. Запас задан В ПИКСЕЛЯХ:
-  // проценты у rootMargin считаются от размеров root, и «200%» на узком экране — совсем
-  // не два экрана. Замерено на живой ленте в Safari: без прогрева 7 скачков из 10 попали
-  // в кадр (крупнейший 1183 px), с прогревом — ни одного, хотя сами скачки остались
-  const layout = new IntersectionObserver(es => es.forEach(e => {
-    if (!e.isIntersecting) return;
-    layout.unobserve(e.target);
-    e.target.classList.add("laid-out");
-  }), { rootMargin: "2500px 0px" });
-  const warmLayout = () => document.querySelectorAll("article.stage").forEach(a => layout.observe(a));
-
-  // один гейт на оба пробуждения: не под «экономией трафика» и не раньше первого движения
-  // по ленте — на первом экране эти мегабайты отнимают канал у того, что уже на экране
-  // раскладку греем всегда, даже под «экономией трафика»: это не про байты, а про то,
-  // дёргается лента под пальцем или нет
-  addEventListener("scroll", warmLayout, { once: true, passive: true });
-  if (!saveData) addEventListener("scroll", () => { warmBg(); warmShelf(); }, { once: true, passive: true });
+  // полку греем не раньше первого движения по ленте: на первом экране эти полтора
+  // мегабайта отнимают канал у того, что уже на экране
+  if (!saveData) addEventListener("scroll", warmShelf, { once: true, passive: true });
 }
 
 // — «наверх»: появляется, когда читатель отъехал от начала. По глубине прокрутки,

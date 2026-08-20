@@ -7,9 +7,9 @@
 // Всё остальное проверяется на реальном контенте самой сборкой (кривая дата, чужой вид
 // медиа, несуществующий кадр — прод-сборка падает и указывает на файл), поэтому дублей
 // тут нет: сюда попадает только то, чего в content/ нет и не должно быть.
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, readFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { deflateSync, crc32 } from "node:zlib";
 import { imageSize } from "./image-size.mjs";
@@ -17,6 +17,7 @@ import { firstRun, siblingLabel } from "./siblings.mjs";
 import { ruHours } from "./ru.mjs";
 
 const dir = mkdtempSync(`${tmpdir()}/gamelog-test-`);
+after(() => rmSync(dir, { recursive: true, force: true }));   // без уборки каталоги копятся
 
 // ---------- размеры картинки ----------
 

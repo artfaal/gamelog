@@ -57,7 +57,13 @@ const mediaUrl = p => /^https?:\/\//.test(p) ? p : String(p).split("/").map(enco
 // ей кодирует рендерер marked, иначе тот же «probe#1.jpg» давал 404 в прозе
 marked.use({ renderer: {
   image({ href, title, text }) {
-    const attrs = [`src="${esc(mediaUrl(href))}"`, `alt="${esc(text ?? "")}"`];
+    // картинка, написанная прямо в тексте записи, идёт мимо shotHtml — значит здесь ей
+    // нужны те же две вещи: размеры (чтобы место было занято до загрузки и текст не
+    // поехал) и lazy с адресом, который снимет гейт в app.js
+    const attrs = [`src="${esc(mediaUrl(href))}"`, `alt="${esc(text ?? "")}"`,
+      'loading="lazy"', 'decoding="async"'];
+    const size = /^media\//.test(href) ? imageSize(`content/${href}`) : null;
+    if (size) attrs.push(`width="${size.w}"`, `height="${size.h}"`);
     if (title) attrs.push(`title="${esc(title)}"`);
     return `<img ${attrs.join(" ")}>`;
   },
