@@ -484,8 +484,25 @@ lb.addEventListener("close", () => {
   }), { rootMargin: "100% 0px" });
   const warmBg = () => document.querySelectorAll("article.stage").forEach(a => bgs.observe(a));
 
+  // высота записи уточняется заранее — за полтора экрана до подхода. Пока запись не
+  // разложена, её место держит заглушка --h, а она промахивается (сборке не сосчитать
+  // высоту текста при неизвестной ширине). Момент, когда браузер решает разложить запись
+  // сам, приходится на кромку вьюпорта: разница между заглушкой и правдой сдвигает всё,
+  // что ниже, — и при чтении СНИЗУ ВВЕРХ этот сдвиг происходит прямо перед глазами.
+  // На записи Gothic это выглядело как чёрная полоса в 172 px, вылезающая под шапкой.
+  // Снимаем content-visibility заранее: скачок случается, пока запись ещё далеко за кадром
+  const layout = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    layout.unobserve(e.target);
+    e.target.classList.add("laid-out");
+  }), { rootMargin: "200% 0px" });
+  const warmLayout = () => document.querySelectorAll("article.stage").forEach(a => layout.observe(a));
+
   // один гейт на оба пробуждения: не под «экономией трафика» и не раньше первого движения
   // по ленте — на первом экране эти мегабайты отнимают канал у того, что уже на экране
+  // раскладка — не трафик: её греем всегда, даже под «экономией трафика», иначе лента
+  // дёргается ровно там, где читатель смотрит
+  addEventListener("scroll", warmLayout, { once: true, passive: true });
   if (!saveData) addEventListener("scroll", () => { warmBg(); warmShelf(); }, { once: true, passive: true });
 }
 

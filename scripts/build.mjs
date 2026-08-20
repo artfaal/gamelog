@@ -357,7 +357,7 @@ const dataPoster = url => url ? ` data-poster='${esc(mediaUrl(url)).replace(/'/g
 // (основного и моментов, в сырых markdown-символах), медиа каждого момента
 // и клип в шапке записи. Подогнано по всем записям на 390×844 и 1440×900
 const stageVars = e => ` style="--h:${Math.round(
-  173 + 0.0859 * (e.textChars ?? 0) + 35 * e.moments.filter(m => m.shot).length + (e.clip ? 45 : 0),
+  179 + 0.0908 * (e.textChars ?? 0) + 35 * e.moments.filter(m => m.shot).length + (e.clip ? 39 : 0),
 )}"`;
 // размеры кадра в разметку: место под него резервируется до загрузки. У магазинных
 // кадров Steam это всегда 1920×1080, свои же бывают узкими кропами (README, «Кадры»),
