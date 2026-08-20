@@ -6,21 +6,13 @@
 // остаётся нарушителем, зато оригинал переписан. Пережимает человек и из исходника:
 // повторное сжатие уже сжатого съедает картинку. Для нарушителей печатается команда.
 import { readdirSync, statSync, existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { LIMITS } from "./image-policy.mjs";
+// размеры читаем сами: тот же разбор заголовка, что и в сборке, без похода в ffprobe
+import { imageSize } from "./image-size.mjs";
 
 const DIR = "content/media";
 if (!existsSync(DIR)) { console.log("нет content/media — кадров нет"); process.exit(0); }
 
-// ffprobe уже нужен проверке клипов и умеет картинки — новую зависимость не тащим
-const probe = file => {
-  const [w, h] = execFileSync("ffprobe", [
-    "-v", "error", "-select_streams", "v:0",
-    "-show_entries", "stream=width,height",
-    "-of", "default=nw=1:nk=1", file,
-  ], { encoding: "utf8" }).trim().split("\n").map(Number);
-  return { w, h };
-};
 
 const files = readdirSync(DIR).filter(f => /\.(jpe?g|png)$/i.test(f)).sort();
 if (!files.length) { console.log("кадров нет"); process.exit(0); }
@@ -29,7 +21,9 @@ let bad = 0;
 for (const name of files) {
   const file = `${DIR}/${name}`;
   const kb = statSync(file).size / 1024;
-  const { w, h } = probe(file);
+  const size = imageSize(file);
+  if (!size) { console.log(`✗ ${name.padEnd(22)} не читается как картинка`); bad++; continue; }
+  const { w, h } = size;
   const png = /\.png$/i.test(name);
   const density = kb / (w * h / 1e6);          // КБ на мегапиксель
   const gripes = [];

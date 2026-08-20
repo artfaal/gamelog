@@ -8,6 +8,7 @@ import matter from "gray-matter";
 import { marked } from "marked";
 import { LIMITS } from "./video-policy.mjs";
 import { posterSmallOf } from "./steam-app.mjs";
+import { imageSize } from "./image-size.mjs";
 
 const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
@@ -369,30 +370,6 @@ const dataPoster = url => url ? ` data-poster='${esc(url).replace(/'/g, "%27")}'
 const stageVars = e => ` style="--h:${Math.round(
   173 + 0.0859 * (e.textChars ?? 0) + 35 * e.moments.filter(m => m.shot).length + (e.clip ? 45 : 0),
 )}"`;
-// размеры картинки из её заголовка: у jpeg — рамка SOF, у png — IHDR. Свои двадцать
-// строк вместо зависимости: сборке нужны только ширина и высота. Чего не умеет:
-// EXIF-поворот (у кадра с Orientation 5–8 браузер поменяет стороны местами, а рамка
-// об этом не знает) и форматы кроме jpeg/png — там вернётся null, и атрибутов просто
-// не будет, как было до этого у всех. В content/media лежат кадры из игр и кропы,
-// прогнанные через ffmpeg по политике кадров, — EXIF там не выживает
-const mediaSize = file => {
-  let buf;
-  try { buf = readFileSync(file); } catch { return null; }
-  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47)
-    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
-  if (buf.length < 4 || buf.readUInt16BE(0) !== 0xffd8) return null;
-  for (let i = 2; i + 9 < buf.length;) {
-    if (buf[i] !== 0xff) { i++; continue; }
-    const marker = buf[i + 1];
-    // SOF0…SOF15 несут размеры кадра; C4/C8/CC — таблицы, не рамка
-    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker))
-      return { w: buf.readUInt16BE(i + 7), h: buf.readUInt16BE(i + 5) };
-    if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd9)) { i += 2; continue; }
-    i += 2 + buf.readUInt16BE(i + 2);
-  }
-  return null;
-};
-
 // размеры кадра в разметку: место под него резервируется до загрузки. У магазинных
 // кадров Steam это всегда 1920×1080, свои же бывают узкими кропами (README, «Кадры»),
 // и подставлять им 1920×1080 значит обещать браузеру не ту высоту
@@ -400,7 +377,7 @@ const shotSize = src => {
   // магазинный кадр Steam всегда 1920×1080; свой читается из файла; чужой по https —
   // ссылка, о которой сборка не знает ничего, и врать про неё размерами нельзя
   if (/^https?:\/\//.test(src)) return "";
-  const size = /^media\//.test(src) ? mediaSize(`content/${src}`) : { w: 1920, h: 1080 };
+  const size = /^media\//.test(src) ? imageSize(`content/${src}`) : { w: 1920, h: 1080 };
   return size ? ` width="${size.w}" height="${size.h}"` : "";
 };
 

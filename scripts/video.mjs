@@ -64,6 +64,16 @@ const faststart = file => {
 const files = readdirSync(DIR).filter(f => /\.(mp4|webm)$/i.test(f)).sort();
 if (!files.length) { console.log("клипов нет"); process.exit(0); }
 
+// без инструмента разбор каждого клипа падает, и отчёт врал: «не читается как видео»
+// про здоровые файлы. Спрашиваем один раз и говорим правду про причину
+const missing = ["ffprobe", ...(FIX ? ["ffmpeg"] : [])].filter(bin => {
+  try { execFileSync(bin, ["-version"], { stdio: "ignore" }); return false; } catch { return true; }
+});
+if (missing.length) {
+  console.error(`нет ${missing.join(" и ")} — поставь: brew install ffmpeg`);
+  process.exit(1);
+}
+
 // Ctrl-C во время ffmpeg обработчиком не перехватить: execFileSync держит поток, и
 // callback вызовется в лучшем случае после его возврата. Поэтому уборка двойная:
 // обработчик — для сигнала, пришедшего между файлами, и подметание осиротевших .part
