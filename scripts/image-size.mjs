@@ -14,7 +14,9 @@ export const imageSize = file => {
   try { buf = readFileSync(file); } catch { return null; }
   // png: полная сигнатура, IHDR первым чанком и его единственно возможная длина 13.
   // Без длины подделка «сигнатура + IHDR + любые числа» читалась как размеры
-  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47 && buf.readUInt32BE(4) === 0x0d0a1a0a
+  // 33 байта — минимум, в котором помещаются сигнатура, длина, тип, сам IHDR и его CRC:
+  // короче файл обрывается внутри чанка, и размеры читались бы из-за его границы
+  if (buf.length >= 33 && buf.readUInt32BE(0) === 0x89504e47 && buf.readUInt32BE(4) === 0x0d0a1a0a
       && buf.readUInt32BE(8) === 13 && buf.toString("latin1", 12, 16) === "IHDR") {
     const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
     return w && h ? { w, h } : null;
@@ -32,9 +34,13 @@ export const imageSize = file => {
     const marker = buf[i + 1];
     // SOF0…SOF15 несут размеры кадра; C4/C8/CC — таблицы, не рамка
     if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
-      // рамка не короче восьми байт: длина, точность, две стороны и число компонентов.
-      // Огрызок с невозможной длиной иначе читался как убедительные размеры
-      if (i + 9 > buf.length || buf.readUInt16BE(i + 2) < 8) return null;
+      // рамка: длина (2), точность (1), две стороны (4), число компонентов (1) и по три
+      // байта на каждый компонент — значит не короче 11 и объявленная длина должна
+      // целиком лежать в файле. Иначе огрызок читался как убедительные размеры
+      if (i + 4 > buf.length) return null;
+      const len = buf.readUInt16BE(i + 2);
+      const nf = i + 9 < buf.length ? buf[i + 9] : 0;
+      if (len < 11 || len !== 8 + 3 * nf || i + 2 + len > buf.length) return null;
       const w = buf.readUInt16BE(i + 7), h = buf.readUInt16BE(i + 5);
       return w && h ? { w, h } : null;   // нулевая сторона (высота из DNL) — не размеры
     }

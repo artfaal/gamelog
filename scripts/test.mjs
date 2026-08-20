@@ -97,6 +97,33 @@ test("усечённый jpeg с хвостом 0xFF не роняет разб�
   assert.equal(imageSize(file), null);
 });
 
+test("усечённый png без полного IHDR — не картинка", () => {
+  // сигнатура, длина 13 и слово IHDR на месте, а самого чанка в файле нет:
+  // размеры читались из-за границы объявленных данных
+  const file = `${dir}/short-ihdr.png`;
+  const head = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from([0, 0, 0, 13]), Buffer.from("IHDR", "latin1"),
+    Buffer.from([0, 0, 0, 123, 0, 0, 1, 200]),   // 123×456 и обрыв
+  ]);
+  writeFileSync(file, head);
+  assert.equal(imageSize(file), null);
+});
+
+test("SOF короче минимально возможного — не размеры", () => {
+  // рамка несёт длину, точность, две стороны, число компонентов и по три байта
+  // на компонент: короче 11 байт её не бывает даже у одноканальной картинки
+  const file = `${dir}/tiny-sof.jpg`;
+  writeFileSync(file, Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x08, 0x08, 0x01, 0xc8, 0x00, 0x7b, 0x00]));
+  assert.equal(imageSize(file), null);
+});
+
+test("SOF обещает больше, чем есть в файле — не размеры", () => {
+  const file = `${dir}/cut-sof.jpg`;
+  writeFileSync(file, Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0xff, 0x08, 0x01, 0xc8, 0x00, 0x7b, 0x03]));
+  assert.equal(imageSize(file), null);
+});
+
 test("огрызок SOF с невозможной длиной сегмента — не размеры", () => {
   const file = `${dir}/bad-sof.jpg`;
   const b = Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x01, 0x08, 0x01, 0xc8, 0x00, 0x7b, 0x03]);

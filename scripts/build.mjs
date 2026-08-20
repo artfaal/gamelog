@@ -332,7 +332,11 @@ const heroVars = e => e.focus != null ? ` style="--focus:${e.focus}%"` : "";
 // единственное место, где собирается атрибут кадра-заглушки — и для записи, и для клипа.
 // значение в апострофах: так во всём исходнике сборки не остаётся жадного атрибута
 // кадра-заглушки, и grep-сторож ловит ровно его, а не собственный data-poster
-const dataPoster = url => url ? ` data-poster='${esc(url).replace(/'/g, "%27")}'` : "";
+// адрес медиа в разметке: имя файла кодируется посегментно. Без этого «probe#1.jpg»
+// уезжал в src как есть, и браузер просил «media/probe», считая остаток фрагментом, —
+// файл на сервере лежал, а кадр не показывался. Внешние ссылки не трогаем: они уже URL
+const mediaUrl = p => /^https?:\/\//.test(p) ? p : String(p).split("/").map(encodeURIComponent).join("/");
+const dataPoster = url => url ? ` data-poster='${esc(mediaUrl(url)).replace(/'/g, "%27")}'` : "";
 
 // --h: во что обойдётся запись по высоте, в svh. Пока запись не отрисована,
 // content-visibility держит её этим числом (см. README, «Записи вне экрана»).
@@ -357,14 +361,14 @@ const shotSize = src => {
 // кадр-заглушку браузер тянет немедленно даже при preload="none" — на первом экране
 // это мегабайты за клипы, до которых читатель ещё не доехал. Ставит его app.js на подходе
 const videoHtml = (src, label, { poster = "", preload = "none", hidden = false } = {}) =>
-  `<video class="clip" src="${esc(src)}" muted loop playsinline controls preload="${preload}"${dataPoster(poster)}
+  `<video class="clip" src="${esc(mediaUrl(src))}" muted loop playsinline controls preload="${preload}"${dataPoster(poster)}
       aria-label="Видео: ${esc(label)}"${hidden ? " inert" : ""}></video>`;
 
 // кадр — кнопка: лайтбокс доступен с клавиатуры. Имя нужно самой кнопке: у магазинного
 // кадра alt пустой намеренно (номер и игру говорит счётчик лайтбокса), и без aria-label
 // экранный диктор читал бы ленту безымянных кнопок
 const shotHtml = (src, alt, hidden = false, label = "") =>
-  `<button type="button" class="shotbtn" aria-label="${esc(label || alt || "Открыть кадр")}"${hidden ? " inert" : ""}><img class="shot" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" decoding="async"${shotSize(src)}></button>`;
+  `<button type="button" class="shotbtn" aria-label="${esc(label || alt || "Открыть кадр")}"${hidden ? " inert" : ""}><img class="shot" src="${esc(mediaUrl(src))}" alt="${esc(alt)}" loading="lazy" decoding="async"${shotSize(src)}></button>`;
 
 const momentMedia = m =>
   !m.shot ? ""
@@ -383,7 +387,7 @@ const momentsHtml = e => e.moments.length
 
 const entryHtml = (e, i) => {
   const logo = e.logo
-    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo${e.logoDark ? " logo--dark" : ""}" src="${esc(e.logo)}" alt="" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}>`
+    ? `<h2 class="sr-only">${esc(e.name)}</h2><img class="logo${e.logoDark ? " logo--dark" : ""}" src="${esc(mediaUrl(e.logo))}" alt="" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}>`
     : `<h2 class="logo-text">${esc(e.name)}</h2>`;
   // оценка — медаль на верхней кромке панели; дуга кольца = сама оценка (--v: 0…10).
   // подпись для скринридера — отдельным sr-only: aria-label на голом span не работает
@@ -404,8 +408,8 @@ const entryHtml = (e, i) => {
   <article class="stage" id="${esc(e.slug)}" data-nav="${i}"${dataPoster(e.poster)}${stageVars(e)}>
     <div class="hero${e.poster ? " hero--poster" : ""}"${heroVars(e)}>
       <picture>
-        ${e.poster ? `<source media="${NARROW}" srcset="${esc(e.poster)}" width="600" height="900">` : ""}
-        <img class="bg" src="${esc(e.hero)}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
+        ${e.poster ? `<source media="${NARROW}" srcset="${esc(mediaUrl(e.poster))}" width="600" height="900">` : ""}
+        <img class="bg" src="${esc(mediaUrl(e.hero))}" alt="" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} width="3840" height="1240">
       </picture>
       ${logo}
     </div>
@@ -476,7 +480,7 @@ const shelfHtml = [...byGroup].map(([g, items]) => `
     <h3 class="shelf__head mono">${esc(g)}</h3>${items.map(([e, i]) => `
       <a href="#${esc(e.slug)}" data-nav-to="${i}" title="${esc(e.name)}" ${cardData(e)}
          aria-label="${esc(e.name)} — ${shelfSay(e)}">
-        <img src="${esc(e.posterSmall ?? e.hero)}" alt="" loading="lazy" decoding="async" width="600" height="900">
+        <img src="${esc(mediaUrl(e.posterSmall ?? e.hero))}" alt="" loading="lazy" decoding="async" width="600" height="900">
         <span class="shelf__num mono" aria-hidden="true">
           <span class="${e.dropped || e.fm.score === TBD ? "dim" : "hi"}">${
             e.dropped ? "дроп" : e.fm.score === TBD ? "—" : ruScore(e.fm.score)}</span>
