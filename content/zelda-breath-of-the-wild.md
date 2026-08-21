@@ -6,6 +6,7 @@ logo: none
 shots: ["media/zelda-botw-horse.jpg", "media/zelda-botw-guardian.jpg"]
 clip: none
 platform: switch
+store: https://www.nintendo.com/us/store/products/the-legend-of-zelda-breath-of-the-wild-switch/
 genres: [Adventure, Action]
 finished: 2020-02-29
 hours: 40

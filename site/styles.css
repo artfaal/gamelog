@@ -92,6 +92,18 @@
   --color-steam:      #66c0f4;
   --color-steam-bg:   #1b2838;
   --color-steam-edge: #2a475e;
+  /* Nintendo: тот же приём, что со Steam — плашка узнаётся цветом, не подписью */
+  --color-switch:      #ff4b57;
+  --color-switch-bg:   #2a1315;
+  --color-switch-edge: #5a2328;
+  --color-psn:         #6aa8ff;
+  --color-psn-bg:      #0f1a2e;
+  --color-psn-edge:    #233a63;
+  /* площадка без своих цветов: та же плашка, но нейтральная — иначе чужой магазин
+     притворялся бы Steam, чьи цвета лежат в базовом правиле */
+  --color-plain:       oklch(76% 0.02 250);
+  --color-plain-bg:    oklch(22% 0.01 250);
+  --color-plain-edge:  oklch(36% 0.02 250);
 
   --font-display: "Cormorant Garamond", "Times New Roman", serif;
   --font-body:    "IBM Plex Sans", system-ui, sans-serif;
@@ -397,6 +409,9 @@ h2, h3, h4 {
     color: var(--color-accent);
   }
   .storelink:hover { border-color: var(--color-steam); color: var(--color-steam); }
+  .storelink--switch:hover { border-color: var(--color-switch); color: var(--color-switch); }
+  .storelink--psn:hover { border-color: var(--color-psn); color: var(--color-psn); }
+  .storelink--plain:hover { border-color: var(--color-accent); color: var(--color-accent); }
   /* у крестика фон ещё и плотнеет: кружок лежит поверх кадра, одного цвета глифа там мало */
   dialog .x:hover { background: var(--color-scrim-strong); }
 }
@@ -502,6 +517,23 @@ h2, h3, h4 {
   text-decoration: none;
 }
 .storelink svg { width: 13px; height: 13px; }
+/* площадка со своим цветом: красный Nintendo приглушён до уровня тёмного кинозала —
+   фирменный #e60012 на чёрном арте выжигает глаз и спорит с янтарём дневника */
+.storelink--switch {
+  border-color: var(--color-switch-edge);
+  background: var(--color-switch-bg);
+  color: var(--color-switch);
+}
+.storelink--psn {
+  border-color: var(--color-psn-edge);
+  background: var(--color-psn-bg);
+  color: var(--color-psn);
+}
+.storelink--plain {
+  border-color: var(--color-plain-edge);
+  background: var(--color-plain-bg);
+  color: var(--color-plain);
+}
 
 /* ———— медиа ———— */
 .glass--media { display: grid; gap: var(--space-md); }

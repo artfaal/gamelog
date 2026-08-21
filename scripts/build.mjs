@@ -125,6 +125,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
   if (fm.clip != null && fm.clip !== "store" && fm.clip !== "none" && !(typeof fm.clip === "string" && fm.clip.startsWith("media/")))
     fail(`clip должен быть store, none или media/…: ${fm.clip}`);
   if (fm.shots != null && !Array.isArray(fm.shots)) fail(`shots должен быть списком: ${fm.shots}`);
+  // steam и store вместе — ошибка автора: у Steam-записи адрес собирается из appid,
+  // и ручная ссылка молча потерялась бы. Лучше сказать вслух, чем показать не ту плашку
+  if (fm.steam && fm.store) fail("steam и store вместе: у Steam-записи ссылка на магазин собирается из appid — убери store");
+  if (fm.store != null && !/^https:\/\//.test(String(fm.store))) fail(`store — https-ссылка на страницу игры: ${fm.store}`);
   if (fm.focus != null && !(Number.isFinite(fm.focus) && fm.focus >= 0 && fm.focus <= 100))
     fail(`focus — число 0–100, процент по горизонтали: ${fm.focus}`);
   if (typeof fm.verdict !== "string" || !fm.verdict.trim()) fail("нужен verdict — одна строка вердикта");
@@ -307,6 +311,9 @@ const I_PLAY = icon('<polygon points="6 4 20 12 6 20 6 4"/>');
 const I_RSS = icon('<path d="M5 18h.01"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/>');
 const I_PAUSE = icon('<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>');
 // логотип Steam — simple-icons (CC0)
+const I_STORE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>`;
+const I_PSN = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 7h9a5 5 0 0 1 4.9 4.05l.75 4.02A2.6 2.6 0 0 1 19.6 18.1c-.8 0-1.54-.42-1.95-1.1l-.86-1.42a1.6 1.6 0 0 0-1.37-.78H8.58c-.56 0-1.08.3-1.37.78L6.35 17c-.41.68-1.15 1.1-1.95 1.1a2.6 2.6 0 0 1-2.55-3.03l.75-4.02A5 5 0 0 1 7.5 7Zm.4 3.1v1.25H6.65v1.2H7.9v1.25h1.2V12.55h1.25v-1.2H9.1V10.1H7.9Zm7.55.15a.95.95 0 1 0 0 1.9.95.95 0 0 0 0-1.9Zm2.05 2.05a.95.95 0 1 0 0 1.9.95.95 0 0 0 0-1.9Z"/></svg>`;
+const I_SWITCH = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.2 2.5h3.05v19H7.2A4.7 4.7 0 0 1 2.5 16.8V7.2a4.7 4.7 0 0 1 4.7-4.7Zm0 1.9A2.8 2.8 0 0 0 4.4 7.2v9.6a2.8 2.8 0 0 0 2.8 2.8h1.15V4.4H7.2Zm-.35 2.2a1.55 1.55 0 1 1 0 3.1 1.55 1.55 0 0 1 0-3.1ZM16.8 2.5A4.7 4.7 0 0 1 21.5 7.2v9.6a4.7 4.7 0 0 1-4.7 4.7h-4.65v-19H16.8Zm.4 8.9a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4Z"/></svg>`;
 const I_STEAM = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>`;
 
 // мета — лента чипов: каждый кусок самодостаточен, разделители не нужны.
@@ -328,14 +335,18 @@ const metaLine = e => {
   if (e.paused) parts.push(`<span class="chip chip--flag">${I_PAUSE}отложил</span>`);
   // hours: tbd — часов просто нет в строке, выдумывать нечего
   if (e.fm.hours !== TBD) parts.push(`<span class="chip chip--hours">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
-  if (e.fm.platform) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
+  // плашка магазина уже называет площадку — второй раз тем же словом её не подписываем
+  const платформаВПлашке = e.fm.store
+    && storeMeta(e.fm.store).platforms.includes(String(e.fm.platform).toLowerCase());
+  if (e.fm.platform && !платформаВПлашке) parts.push(`<span class="chip chip--platform">${esc(e.fm.platform)}</span>`);
   for (const s of e.siblings) {
     const label = siblingLabel(s, e, e.firstOfGame === s);
     parts.push(`<a class="chip chip--link" href="#${s.slug}">${label} ↗</a>`);
   }
-  // есть appid — даём читателю прямой путь на страницу игры в магазине
-  if (e.fm.steam) parts.push(`<a class="storelink" href="https://store.steampowered.com/app/${e.fm.steam}/" target="_blank" rel="noopener"
-        aria-label="Открыть ${esc(e.name)} в Steam — новая вкладка">${I_STEAM}<span>Steam</span></a>`);
+  // прямой путь к самой игре: у Steam адрес собирается из appid, у остальных площадок
+  // берётся из store во фронтматтере — консольной записи иначе некуда сослаться
+  if (e.fm.steam) parts.push(storeLink(`https://store.steampowered.com/app/${e.fm.steam}/`, "Steam", I_STEAM, "", e.name));
+  else if (e.fm.store) parts.push(storeLink(e.fm.store, storeName(e.fm.store), storeIcon(e.fm.store), storeMod(e.fm.store), e.name));
   parts.push(`<button type="button" class="chip chip--btn share" data-slug="${esc(e.slug)}" data-name="${esc(e.name)}" aria-label="Поделиться ссылкой">${I_SHARE}${I_CHECK}</button>`);
   // пробел между чипами — не для вида (зазор даёт margin), а чтобы копирование
   // строки мышью не склеивало значения: «1 июня 202647 часов»
@@ -350,6 +361,28 @@ const heroVars = e => e.focus != null ? ` style="--focus:${e.focus}%"` : "";
 // единственное место, где собирается атрибут кадра-заглушки — и для записи, и для клипа.
 // значение в апострофах: так во всём исходнике сборки не остаётся жадного атрибута
 // кадра-заглушки, и grep-сторож ловит ровно его, а не собственный data-poster
+// площадка узнаётся по домену: подпись, значок и фирменный цвет плашки. Список короткий
+// намеренно — растёт по мере того, как в дневник приезжают записи с новых консолей
+const STORES = [
+  // platforms — под какими значениями `platform:` площадка называет ту же железку:
+  // плашка уже подписана «PlayStation», и чип «ps5» рядом с ней был бы тем же словом дважды
+  { host: "nintendo.com", name: "Switch", icon: () => I_SWITCH, mod: " storelink--switch", platforms: ["switch", "switch 2"] },
+  { host: "playstation.com", name: "PlayStation", icon: () => I_PSN, mod: " storelink--psn", platforms: ["ps4", "ps5", "playstation", "psn"] },
+];
+const NO_STORE = { name: "Магазин", icon: () => I_STORE, mod: " storelink--plain", platforms: [] };
+// hostname, а не поиск подстроки: «fake-nintendo.com» не должен притворяться Nintendo
+const storeMeta = url => {
+  let host;
+  try { host = new URL(String(url)).hostname.toLowerCase(); } catch { return NO_STORE; }
+  return STORES.find(s => host === s.host || host.endsWith(`.${s.host}`)) ?? NO_STORE;
+};
+const storeName = url => storeMeta(url).name;
+const storeIcon = url => storeMeta(url).icon();
+const storeMod = url => storeMeta(url).mod;
+const storeLink = (href, name, icon, mod, game) =>
+  `<a class="storelink${mod}" href="${esc(href)}" target="_blank" rel="noopener"
+        aria-label="Открыть ${esc(game)} в ${esc(name)} — новая вкладка">${icon}<span>${esc(name)}</span></a>`;
+
 const dataPoster = url => url ? ` data-poster='${esc(mediaUrl(url)).replace(/'/g, "%27")}'` : "";
 
 // размеры кадра в разметку: место под него резервируется до загрузки. У магазинных
