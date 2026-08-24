@@ -9,10 +9,13 @@
 // и половина фактуры для моментов.
 //
 // Ничего не пишет — как hours.mjs и suggest.mjs: решение и текст за человеком.
+// Экспортирует runs(appid) для new.mjs: заготовка записи подставляет дату финала
+// из ачивок вместо tbd-догадки.
 //
 //   make timeline APPID=1245620
 //   node scripts/timeline.mjs 1245620
 import { existsSync, readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { steamCreds, steamFetch } from "./steam-owned.mjs";
 
 const API = "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/";
@@ -28,77 +31,106 @@ const TAIL = 5;   // последние ачивки захода — по ни�
 const PEAKS = 3;  // самые плотные дни захода
 const MISSED = 12;
 
-const appid = Number(process.argv[2]);
-if (!Number.isInteger(appid) || appid <= 0) {
-  console.error("нужен appid: node scripts/timeline.mjs 1245620");
-  process.exit(1);
-}
-
-const { KEY, ID } = steamCreds();
-const rerun = `node scripts/timeline.mjs ${appid}`;
-// l=russian: Steam сам отдаёт английский там, где русского перевода нет, и отдельная
-// развилка «а если пусто» была бы кодом ради ничего.
-// 400 у этого эндпоинта — не сбой сети, а ответ по существу: достижений для appid нет.
-// Отдаём его вызывающему сами, иначе общая подсказка гонит чинить прокси, который цел.
-const res = await steamFetch(`${API}?appid=${appid}&key=${KEY}&steamid=${ID}&l=russian`, rerun, [400]);
-if (res.status === 400) {
-  console.error(`достижений у ${appid} в Steam нет (либо appid не тот) — дат не будет, спрашивай автора без подсказок`);
-  process.exit(1);
-}
-const stats = (await res.json()).playerstats ?? {};
-
-if (!stats.success) {
-  // Профиль закрыт или скрыта игровая статистика — ачивки есть, но нам их не покажут.
-  console.error(`Steam не отдал ачивки (${stats.error ?? "без объяснения"}) — проверь приватность профиля`);
-  process.exit(1);
-}
-
-const all = stats.achievements ?? [];
-const done = all.filter(a => a.achieved && a.unlocktime)
+// Выбитые ачивки датами по возрастанию — общий кусок CLI и runs().
+const doneOf = stats => (stats.achievements ?? [])
+  .filter(a => a.achieved && a.unlocktime)
   .map(a => ({ name: a.name || a.apiname, at: new Date(a.unlocktime * 1000) }))
   .sort((a, b) => a.at - b.at);
 
-// Имя из кэша, если игра уже заведена: там оно то же самое, что в записи и на полке.
-const cache = `cache/${appid}.json`;
-const name = (existsSync(cache) && JSON.parse(readFileSync(cache, "utf8")).name) || stats.gameName || appid;
-
-console.log(`${name} — ${done.length} из ${all.length} ачивок`);
-
-if (!done.length) {
-  console.log("\nни одной не выбито — дат нет, спрашивай автора без подсказок");
-  process.exit(0);
-}
-
-const day = d => d.toISOString().slice(0, 10);
-
 // Заходы: режем цепочку там, где между соседними ачивками пауза длиннее GAP_DAYS.
-const runs = [[done[0]]];
-for (let i = 1; i < done.length; i++) {
-  const gap = (done[i].at - done[i - 1].at) / DAY;
-  if (gap > GAP_DAYS) runs.push([]);
-  runs.at(-1).push(done[i]);
+export function splitRuns(done) {
+  const runs = [[done[0]]];
+  for (let i = 1; i < done.length; i++) {
+    const gap = (done[i].at - done[i - 1].at) / DAY;
+    if (gap > GAP_DAYS) runs.push([]);
+    runs.at(-1).push(done[i]);
+  }
+  return runs;
 }
 
-for (const [i, run] of runs.entries()) {
-  const from = run[0].at, to = run.at(-1).at;
-  const days = Math.round((to - from) / DAY) + 1;
-  const head = runs.length > 1 ? `заход ${i + 1} · ` : "заход: ";
-  console.log(`\n${head}${day(from)} … ${day(to)} (${days} дн., ачивок ${run.length})`);
-
-  // Плотные дни: где ачивок за сутки больше одной, там и была настоящая сессия.
-  const byDay = new Map();
-  for (const a of run) byDay.set(day(a.at), (byDay.get(day(a.at)) ?? 0) + 1);
-  const peaks = [...byDay].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]).slice(0, PEAKS);
-  if (peaks.length) console.log(`  плотнее всего: ${peaks.map(([d, n]) => `${d} (${n})`).join(", ")}`);
-
-  // Хвост захода — обычно финал: концовки и последние боссы падают под конец.
-  const tail = run.slice(-TAIL);
-  console.log(`  под конец: ${tail.map(a => `${day(a.at)} ${a.name}`).join(" · ")}`);
+// runs(appid) — мягкая версия похода за ачивками для new.mjs: на любом отказе
+// (нет кредов, сеть, ачивок у игры нет, закрытый профиль, ноль выбитых) возвращает
+// null и не выходит из процесса — вызывающему есть куда деградировать (tbd в
+// заготовке). Жёсткие ошибки с диагнозом — дело CLI ниже: ему отказ надо
+// объяснять, а не глотать.
+export async function runs(appid) {
+  const KEY = process.env.STEAM_API_KEY, ID = process.env.STEAM_ID;
+  if (!KEY || !ID) return null;
+  const res = await fetch(`${API}?appid=${appid}&key=${KEY}&steamid=${ID}&l=russian`).catch(() => null);
+  if (!res?.ok) return null;
+  const stats = (await res.json().catch(() => ({}))).playerstats ?? {};
+  if (!stats.success) return null;
+  const done = doneOf(stats);
+  return done.length ? splitRuns(done) : null;
 }
 
-const missed = all.filter(a => !a.achieved).map(a => a.name || a.apiname);
-if (missed.length) {
-  const shown = missed.slice(0, MISSED).join(" · ");
-  const rest = missed.length > MISSED ? ` … и ещё ${missed.length - MISSED}` : "";
-  console.log(`\nне выбито (${missed.length}): ${shown}${rest}`);
+async function main() {
+  const appid = Number(process.argv[2]);
+  if (!Number.isInteger(appid) || appid <= 0) {
+    console.error("нужен appid: node scripts/timeline.mjs 1245620");
+    process.exit(1);
+  }
+
+  const { KEY, ID } = steamCreds();
+  const rerun = `node scripts/timeline.mjs ${appid}`;
+  // l=russian: Steam сам отдаёт английский там, где русского перевода нет, и отдельная
+  // развилка «а если пусто» была бы кодом ради ничего.
+  // 400 у этого эндпоинта — не сбой сети, а ответ по существу: достижений для appid нет.
+  // Отдаём его вызывающему сами, иначе общая подсказка гонит чинить прокси, который цел.
+  const res = await steamFetch(`${API}?appid=${appid}&key=${KEY}&steamid=${ID}&l=russian`, rerun, [400]);
+  if (res.status === 400) {
+    console.error(`достижений у ${appid} в Steam нет (либо appid не тот) — дат не будет, спрашивай автора без подсказок`);
+    process.exit(1);
+  }
+  const stats = (await res.json()).playerstats ?? {};
+
+  if (!stats.success) {
+    // Профиль закрыт или скрыта игровая статистика — ачивки есть, но нам их не покажут.
+    console.error(`Steam не отдал ачивки (${stats.error ?? "без объяснения"}) — проверь приватность профиля`);
+    process.exit(1);
+  }
+
+  const all = stats.achievements ?? [];
+  const done = doneOf(stats);
+
+  // Имя из кэша, если игра уже заведена: там оно то же самое, что в записи и на полке.
+  const cache = `cache/${appid}.json`;
+  const name = (existsSync(cache) && JSON.parse(readFileSync(cache, "utf8")).name) || stats.gameName || appid;
+
+  console.log(`${name} — ${done.length} из ${all.length} ачивок`);
+
+  if (!done.length) {
+    console.log("\nни одной не выбито — дат нет, спрашивай автора без подсказок");
+    process.exit(0);
+  }
+
+  const day = d => d.toISOString().slice(0, 10);
+  const sessions = splitRuns(done);
+
+  for (const [i, run] of sessions.entries()) {
+    const from = run[0].at, to = run.at(-1).at;
+    const days = Math.round((to - from) / DAY) + 1;
+    const head = sessions.length > 1 ? `заход ${i + 1} · ` : "заход: ";
+    console.log(`\n${head}${day(from)} … ${day(to)} (${days} дн., ачивок ${run.length})`);
+
+    // Плотные дни: где ачивок за сутки больше одной, там и была настоящая сессия.
+    const byDay = new Map();
+    for (const a of run) byDay.set(day(a.at), (byDay.get(day(a.at)) ?? 0) + 1);
+    const peaks = [...byDay].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]).slice(0, PEAKS);
+    if (peaks.length) console.log(`  плотнее всего: ${peaks.map(([d, n]) => `${d} (${n})`).join(", ")}`);
+
+    // Хвост захода — обычно финал: концовки и последние боссы падают под конец.
+    const tail = run.slice(-TAIL);
+    console.log(`  под конец: ${tail.map(a => `${day(a.at)} ${a.name}`).join(" · ")}`);
+  }
+
+  const missed = all.filter(a => !a.achieved).map(a => a.name || a.apiname);
+  if (missed.length) {
+    const shown = missed.slice(0, MISSED).join(" · ");
+    const rest = missed.length > MISSED ? ` … и ещё ${missed.length - MISSED}` : "";
+    console.log(`\nне выбито (${missed.length}): ${shown}${rest}`);
+  }
 }
+
+// При импорте (new.mjs берёт runs) CLI не исполняется.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

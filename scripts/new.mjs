@@ -4,6 +4,7 @@
 // Форма кэша и походы в Steam — scripts/steam-app.mjs (общий канон с refresh.mjs).
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fetchApp, microtrailer, appCache } from "./steam-app.mjs";
+import { runs } from "./timeline.mjs";
 
 const args = process.argv.slice(2);
 const appid = args[0];
@@ -47,11 +48,19 @@ const md = `content/${slug}.md`;
 if (existsSync(md)) {
   console.log(`${md} уже есть — не трогаю`);
 } else {
+  // Дата финала — из ачивок, а не догадкой: точный источник лежит в том же Steam,
+  // куда мы уже сходили за метой. Отказ (нет кредов, сети, ачивок) — прежний tbd.
+  const sessions = await runs(appid);
+  const finished = sessions
+    ? `${sessions.at(-1).at(-1).at.toISOString().slice(0, 10)}  # из ачивок последнего захода — сверь`
+    : `tbd     # дата финала; tbd = «сейчас играю»`;
+  if (!sessions)
+    console.log("дата финала из ачивок не подставлена (нет кредов game-compass.env, сети или ачивок) — в заготовке tbd");
   writeFileSync(
     md,
     `---
 steam: ${appid}
-finished: tbd     # дата финала; tbd = «сейчас играю»
+finished: ${finished}
 hours: tbd        # число часов или tbd
 score: tbd        # 1–10, можно с половиной (7.5), или tbd; дропнул — убери score и поставь dropped: true
 verdict:
