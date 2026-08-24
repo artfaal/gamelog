@@ -50,6 +50,7 @@ ab: drafts
 	@git worktree add --detach .ab-base $(BEFORE)
 	@ln -s ../node_modules .ab-base/node_modules
 	@mkdir -p .ab-base/cache && ln -s ../../cache/assets .ab-base/cache/assets
+	@mkdir -p .ab-base/content/media
 	@for f in content/media/*.mp4 content/media/*.webm; do \
 	  test -e "$$f" && ln -sf "$$(pwd)/$$f" ".ab-base/$$f"; done; true
 	@cd .ab-base && node scripts/build.mjs --drafts

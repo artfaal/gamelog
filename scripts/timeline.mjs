@@ -39,6 +39,7 @@ const doneOf = stats => (stats.achievements ?? [])
 
 // Заходы: режем цепочку там, где между соседними ачивками пауза длиннее GAP_DAYS.
 export function splitRuns(done) {
+  if (!done.length) return [];
   const runs = [[done[0]]];
   for (let i = 1; i < done.length; i++) {
     const gap = (done[i].at - done[i - 1].at) / DAY;
