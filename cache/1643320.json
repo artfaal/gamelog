@@ -1,0 +1,26 @@
+{
+  "appid": 1643320,
+  "name": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/1643320/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/1643320/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/1643320/library_600x900_2x.jpg",
+  "posterSmall": "https://cdn.cloudflare.steamstatic.com/steam/apps/1643320/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/6467b08ef0929424e016dc9ac613656f2119f9a0/ss_6467b08ef0929424e016dc9ac613656f2119f9a0.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/dc84227622e39f7af2595cddcab10f131b3640c3/ss_dc84227622e39f7af2595cddcab10f131b3640c3.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/343b6833c0c0e565c92db8d73a4863ceece7d450/ss_343b6833c0c0e565c92db8d73a4863ceece7d450.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/17db0dd4dd94dc4ae9a6cf142f6ec75365ad42d5/ss_17db0dd4dd94dc4ae9a6cf142f6ec75365ad42d5.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/f3c2e3184bce5e28d930f4a02df37065c4094d1a/ss_f3c2e3184bce5e28d930f4a02df37065c4094d1a.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/6c2eb259419a9c1c07fcfa80fc92b89545d919e8/ss_6c2eb259419a9c1c07fcfa80fc92b89545d919e8.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/c66c2891f7e896b7b3669a97010e78d7efb36ffa/ss_c66c2891f7e896b7b3669a97010e78d7efb36ffa.1920x1080.jpg?t=1789038346",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1643320/6dd918e8d8fd9697b281cffa9ca3d8935f5d870d/ss_6dd918e8d8fd9697b281cffa9ca3d8935f5d870d.1920x1080.jpg?t=1789038346"
+  ],
+  "micro": null,
+  "genres": [
+    "Action",
+    "Adventure",
+    "RPG"
+  ],
+  "coop": false,
+  "released": "Nov 20, 2024"
+}
