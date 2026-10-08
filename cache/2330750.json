@@ -1,0 +1,25 @@
+{
+  "appid": 2330750,
+  "name": "Cataclysm: Dark Days Ahead",
+  "hero": "https://cdn.cloudflare.steamstatic.com/steam/apps/2330750/library_hero.jpg",
+  "logo": "https://cdn.cloudflare.steamstatic.com/steam/apps/2330750/logo.png",
+  "poster": "https://cdn.cloudflare.steamstatic.com/steam/apps/2330750/library_600x900_2x.jpg",
+  "posterSmall": "https://cdn.cloudflare.steamstatic.com/steam/apps/2330750/library_600x900.jpg",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_3adbdf80a10379765e90f1a1fda05c410521a2c8.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_c111e92b7c1bfc0f982f09428ab69c98a52f4978.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_94860a30f33b3e4dfb7caeffef292179fa50229b.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_fa86058eb70a3fac1cc12cbe805e4ae17a71e31a.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_614bf9dade01d1ee79b827e528408d349c8a19bf.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_9355d4c03cd43f17792d5ce667574d3ba9832b1d.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_35a9863a68f34e93ae61c539a70c3c60f2e35684.1920x1080.jpg?t=1682737875",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2330750/ss_b7b99f966c0ab4eee05cf3c5f08cdd60b3ce0379.1920x1080.jpg?t=1682737875"
+  ],
+  "micro": "https://cdn.akamai.steamstatic.com/steam/apps/256933342/microtrailer.webm",
+  "genres": [
+    "Adventure",
+    "RPG"
+  ],
+  "coop": false,
+  "released": "Mar 31, 2023"
+}
