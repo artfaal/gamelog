@@ -553,3 +553,67 @@ const spy = new IntersectionObserver(es => {
   });
 }, { rootMargin: "-35% 0px -55% 0px" });
 stages.forEach(el => spy.observe(el));
+
+// THROWAWAY PROTOTYPE: refined placements of the recommendation mark on the real diary.
+// Compare with ?variant=D|E|F on localhost; no prototype UI runs on the published site.
+if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+  const variants = [
+    ["D", "После часов"],
+    ["E", "В конце меты"],
+    ["F", "Знак за оценкой"],
+  ];
+  const negative = new Set([
+    "oblivion-remastered", "pragmata", "space-haven", "stalker-2", "subnautica-2",
+  ]);
+  const protoStages = [...document.querySelectorAll("article.stage")];
+  const mobile = matchMedia("(max-width: 48rem)");
+  const mark = isPositive => {
+    const label = isPositive ? "Рекомендую" : "Не рекомендую";
+    const el = document.createElement("span");
+    el.className = `proto-vote ${isPositive ? "proto-vote--yes" : "proto-vote--no"}`;
+    el.title = label;
+    el.innerHTML = `<span class="sr-only">${label}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3Zm0 0 5.2-7a2 2 0 0 1 3.4 2L15 10h4.2a2 2 0 0 1 1.9 2.6l-2 7a2 2 0 0 1-1.9 1.4H7"/></svg>`;
+    return el;
+  };
+  const bar = document.createElement("div");
+  bar.className = "proto-switcher";
+  bar.setAttribute("role", "toolbar");
+  bar.setAttribute("aria-label", "Варианты значка рекомендации");
+  bar.innerHTML = `<button type="button" data-step="-1" aria-label="Предыдущий вариант">←</button><span class="proto-switcher__label"></span><button type="button" data-step="1" aria-label="Следующий вариант">→</button>`;
+  document.body.append(bar);
+  let current = variants.some(([key]) => key === new globalThis.URL(location.href).searchParams.get("variant"))
+    ? new globalThis.URL(location.href).searchParams.get("variant") : "D";
+  const render = () => {
+    document.body.dataset.protoVariant = current;
+    bar.querySelector(".proto-switcher__label").textContent = `${current} · ${variants.find(([key]) => key === current)[1]}`;
+    for (const stage of protoStages) {
+      stage.querySelector(".proto-vote")?.remove();
+      const vote = mark(!negative.has(stage.id));
+      const note = stage.querySelector(".glass.note");
+      const scoreChip = note.querySelector(".chip--score");
+      if (current === "D") (note.querySelector(".chip--hours") ?? note.querySelector(".chip--date") ?? scoreChip).after(vote);
+      else if (current === "E") note.querySelector(".share").before(vote);
+      else if (!mobile.matches) note.querySelector(".score").append(vote);
+      else scoreChip.after(vote);
+    }
+  };
+  const switchTo = step => {
+    const index = variants.findIndex(([key]) => key === current);
+    current = variants[(index + step + variants.length) % variants.length][0];
+    const url = new globalThis.URL(location.href);
+    url.searchParams.set("variant", current);
+    history.replaceState(null, "", url);
+    render();
+  };
+  bar.addEventListener("click", event => {
+    const button = event.target.closest("button[data-step]");
+    if (button) switchTo(Number(button.dataset.step));
+  });
+  addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    if (event.target.closest("input, textarea, [contenteditable]")) return;
+    switchTo(event.key === "ArrowRight" ? 1 : -1);
+  });
+  mobile.addEventListener("change", render);
+  render();
+}
