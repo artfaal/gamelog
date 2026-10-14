@@ -33,7 +33,7 @@ Steam разрешает [русский язык, отрицательные о
 | Elden Ring | 1245620 | ready | 84,2 ч · 2026-10-14 | |
 | Escape from Duckov | 3167020 | ready | 88,0 ч · 2026-10-14 | |
 | Gothic 1 Remake | 1297900 | ready | 8,9 ч · 2026-10-14 | |
-| Graveyard Keeper II | 4358690 | ready | 26,7 ч · 2026-10-14 | |
+| Graveyard Keeper II | 4358690 | published | 26,7 ч · 2026-10-14 | [14.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/4358690/) |
 | No Rest for the Wicked | 1371980 | ready | 37,1 ч · 2026-10-14 | |
 | Noita | 881100 | ready | 13,7 ч · 2026-10-14 | |
 | Oblivion Remastered | 2623190 | skipped | 9,3 ч · 2026-10-14 | |
