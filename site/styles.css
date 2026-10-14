@@ -388,6 +388,8 @@ h2, h3, h4 {
 }
 .chip--date svg { color: var(--color-ico-date); }
 .chip--hours svg { color: var(--color-ico-hours); }
+.chip--recommend.is-positive { color: oklch(76% 0.12 150); }
+.chip--recommend.is-negative { color: oklch(75% 0.10 25); }
 .chip--flag { color: var(--color-accent); }
 .chip--platform { text-transform: uppercase; }
 .chip--link { color: var(--color-accent); text-decoration: none; }

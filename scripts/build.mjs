@@ -14,6 +14,7 @@ import { ruHours, ruGames, ruScore } from "./ru.mjs";
 
 const DRAFTS = process.argv.includes("--drafts");
 const SITE = "https://games.artfaal.ru";
+const recommendations = JSON.parse(readFileSync("content/recommendations.json", "utf8"));
 
 // ---------- утилиты ----------
 // `>` экранируется наравне с остальными: в HTML он был не обязателен, но тем же esc
@@ -144,6 +145,10 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     if (existsSync(`cache/${fm.steam}.json`)) steam = JSON.parse(readFileSync(`cache/${fm.steam}.json`, "utf8"));
     else fail(`нет cache/${fm.steam}.json — запусти: node scripts/new.mjs ${fm.steam}`);
   } else if (!fm.hero) fail("нужно поле steam: <appid> — или hero: media/…");
+  const key = gameKey({ fm, slug });
+  const recommendation = Object.hasOwn(recommendations, key) ? recommendations[key] : undefined;
+  if (!fm.draft && typeof recommendation !== "boolean")
+    fail(`нет решения true/false в content/recommendations.json для «${fm.name ?? steam?.name ?? slug}» (gameKey: ${key})`);
 
   // расширение решает, чем ссылка станет в разметке: клип — <video>, кадр — <img>.
   // Проверка живёт внутри media(), потому что сюда сходится всё — clip, shots, hero,
@@ -229,6 +234,7 @@ for (const f of readdirSync("content").filter(f => f.endsWith(".md"))) {
     dropped,
     playing,
     paused,
+    recommendation: typeof recommendation === "boolean" ? recommendation : null,
     // фасеты полки: у Steam-игр жанры из кэша, у остальных — руками во фронтматтере,
     // иначе запись молча выпадает из любого жанрового среза
     genres: Array.isArray(fm.genres) ? fm.genres.map(String) : (steam?.genres ?? []).filter(g => !GENRE_STOP.has(g)),
@@ -307,6 +313,8 @@ const I_SHARE = icon('<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><poly
 const I_CHECK = icon('<polyline points="20 6 9 17 4 12"/>', "i-check");
 const I_CAL = icon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>');
 const I_CLOCK = icon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
+const I_THUMB = icon('<path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 3a3.13 3.13 0 0 1 3 2.88Z"/>');
+const I_THUMB_DOWN = I_THUMB.replace("<path", '<path transform="rotate(180 12 12)"');
 const I_PLAY = icon('<polygon points="6 4 20 12 6 20 6 4"/>');
 const I_RSS = icon('<path d="M5 18h.01"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/>');
 const I_PAUSE = icon('<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>');
@@ -335,6 +343,10 @@ const metaLine = e => {
   if (e.paused) parts.push(`<span class="chip chip--flag">${I_PAUSE}отложил</span>`);
   // hours: tbd — часов просто нет в строке, выдумывать нечего
   if (e.fm.hours !== TBD) parts.push(`<span class="chip chip--hours">${I_CLOCK}${ruHours(e.fm.hours)}</span>`);
+  if (e.recommendation !== null) {
+    const label = e.recommendation ? "Рекомендую" : "Не рекомендую";
+    parts.push(`<span class="chip chip--recommend ${e.recommendation ? "is-positive" : "is-negative"}" role="img" aria-label="${label}" title="${label}">${e.recommendation ? I_THUMB : I_THUMB_DOWN}</span>`);
+  }
   // плашка магазина уже называет площадку — второй раз тем же словом её не подписываем
   const платформаВПлашке = e.fm.store
     && storeMeta(e.fm.store).platforms.includes(String(e.fm.platform).toLowerCase());
