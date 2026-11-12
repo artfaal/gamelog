@@ -123,9 +123,10 @@ const soft = !fields && targets.length > 1;
 for (const appid of targets) {
   const file = `cache/${appid}.json`;
   const was = JSON.parse(readFileSync(file, "utf8"));
-  const data = await fetchApp(appid, "node scripts/refresh.mjs …", { soft });
-  if (!data) { skipped++; continue; }
   const need = fields ?? KNOWN;
+  const includeAssets = need.some(k => ["hero", "logo", "poster", "posterSmall"].includes(k));
+  const data = await fetchApp(appid, "node scripts/refresh.mjs …", { soft, includeAssets });
+  if (!data) { skipped++; continue; }
 
   let micro = was.micro, microKnown = true;
   if (need.includes("micro")) ({ value: micro, known: microKnown } = await microtrailer(data));

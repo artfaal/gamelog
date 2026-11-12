@@ -63,6 +63,15 @@ node scripts/new.mjs 1145360            # appid из URL страницы игр
 моментах), а Steam порядок скринов меняет: перезапиши `shots` — и картинки в ленте
 молча поедут, сборка этого не заметит. Обновить поле в готовом кэше — `refresh.mjs`.
 
+Обои и постеры `new.mjs` получает из Steam Store Browse API: у новых игр адреса
+содержат хеш, а постер называется `library_capsule`, поэтому старый шаблон
+`/steam/apps/<appid>/library_600x900.jpg` может вернуть 404. Для старого кэша:
+`node scripts/refresh.mjs <appid> --field hero,poster,posterSmall,logo` — кадры и их
+нумерация сохранятся. Store Browse не отдаёт логотип: скрипт проверяет прежний
+адрес, при 404 оставляет имя игры текстом. Актуальный логотип можно задать через
+`logo: https://…` в записи; его URL можно взять из кеша установленного Steam
+(`appcache/librarycache/<appid>/<hash>/logo.png`) и проверить на CDN.
+
 Дальше — руками в `content/hades.md`:
 
 ```yaml

@@ -51,6 +51,7 @@ Steam разрешает [русский язык, отрицательные о
 | Oblivion Remastered | 2623190 | skipped | 9,3 ч · 2026-10-14 | |
 | Pacific Drive | 1458140 | published | 21,4 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/1458140) |
 | Pragmata | 3357650 | published | 5,9 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/3357650) |
+| Probably Stolen | 4348910 | ready | 43,3 ч · 2026-11-12 | |
 | Project Zomboid | 108600 | published | 294,2 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/108600) |
 | Slay the Spire 2 | 2868840 | published | 56,8 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/2868840) |
 | Space Haven | 979110 | published | 8,2 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/979110) |

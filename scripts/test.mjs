@@ -15,6 +15,22 @@ import { deflateSync, crc32 } from "node:zlib";
 import { imageSize } from "./image-size.mjs";
 import { firstRun, siblingLabel } from "./siblings.mjs";
 import { ruHours } from "./ru.mjs";
+import { appCache } from "./steam-app.mjs";
+
+test("обложки Steam используют пути из Store API, включая хеш и новое имя capsule", () => {
+  const cache = appCache(4348910, {
+    name: "Probably Stolen",
+    assets: {
+      asset_url_format: "steam/apps/4348910/${FILENAME}?t=1794473922",
+      library_hero: "5c4503e62e9ff9d138d93d972ebd1fe62af114bc/library_hero.jpg",
+      library_capsule: "5cb0a6457762778c2c3bcaaa06768bb77cc791a8/library_capsule.jpg",
+      library_capsule_2x: "5cb0a6457762778c2c3bcaaa06768bb77cc791a8/library_capsule_2x.jpg",
+    },
+  }, null);
+  assert.equal(cache.hero, "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/5c4503e62e9ff9d138d93d972ebd1fe62af114bc/library_hero.jpg?t=1794473922");
+  assert.equal(cache.poster, "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/5cb0a6457762778c2c3bcaaa06768bb77cc791a8/library_capsule_2x.jpg?t=1794473922");
+  assert.equal(cache.posterSmall, "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/5cb0a6457762778c2c3bcaaa06768bb77cc791a8/library_capsule.jpg?t=1794473922");
+});
 
 const dir = mkdtempSync(`${tmpdir()}/gamelog-test-`);
 after(() => rmSync(dir, { recursive: true, force: true }));   // без уборки каталоги копятся

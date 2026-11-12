@@ -25,7 +25,7 @@ if (existsSync(file)) {
   cache = JSON.parse(readFileSync(file, "utf8"));
   console.log(`${file} уже есть — не трогаю (обновить поле: node scripts/refresh.mjs ${appid} --field genres)`);
 } else {
-  const data = await fetchApp(appid, `node scripts/new.mjs ${appid}`);
+  const data = await fetchApp(appid, `node scripts/new.mjs ${appid}`, { includeAssets: true });
   const { value: micro, known, movieid } = await microtrailer(data);
   if (!known) {
     console.error("проверка микротрейлера сорвалась (сеть) — повтори позже; за прокси: NODE_USE_ENV_PROXY=1 HTTPS_PROXY=… node scripts/new.mjs " + appid);

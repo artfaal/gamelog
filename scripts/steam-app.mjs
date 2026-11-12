@@ -8,7 +8,7 @@
 // soft — вернуть null вместо выхода. Нужно там, где игр много, а результат только
 // читается: один моргнувший запрос не повод потерять отчёт по остальным двадцати.
 // Где по ответу пишут в кэш — soft не ставить: писать по половине данных нельзя.
-export async function fetchApp(appid, rerun, { soft = false } = {}) {
+export async function fetchApp(appid, rerun, { soft = false, includeAssets = false } = {}) {
   const res = await fetch(
     `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=english`,
   ).catch(() => null);
@@ -28,7 +28,26 @@ export async function fetchApp(appid, rerun, { soft = false } = {}) {
     console.error(what);
     process.exit(1);
   }
-  return data;
+  if (!includeAssets) return data;
+  // Store Browse отдаёт актуальные пути, включая хеши и library_capsule.
+  // appdetails их не содержит; старые /steam/apps/<id>/library_*.jpg у новых игр дают 404.
+  const input = { ids: [{ appid: Number(appid) }], context: { language: "english", country_code: "US" }, data_request: { include_assets: true } };
+  const legacyLogo = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/logo.png`;
+  const [artRes, logoRes] = await Promise.all([
+    fetch(`https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=${encodeURIComponent(JSON.stringify(input))}`).catch(() => null),
+    fetch(legacyLogo, { method: "HEAD" }).catch(() => null),
+  ]);
+  const art = artRes?.ok ? await artRes.json().catch(() => null) : null;
+  const assets = art?.response?.store_items?.find(i => Number(i.appid) === Number(appid))?.assets;
+  if (!assets?.asset_url_format || !assets.library_hero || !assets.library_capsule ||
+      (!logoRes?.ok && logoRes?.status !== 404)) {
+    console.error(`Steam ${appid}: не получены обложки Store Browse или не проверен логотип; повтори ${rerun}`);
+    if (soft) return null;
+    process.exit(1);
+  }
+  // Store Browse не отдаёт library logo. Только подтверждённый 404 означает,
+  // что старого логотипа нет; сеть не превращаем в отсутствие картинки.
+  return { ...data, assets, libraryLogo: logoRes.ok ? legacyLogo : null };
 }
 
 // У свежих роликов Steam легаси-файла микротрейлера нет (404) — это нормально и означает
@@ -53,15 +72,18 @@ export const posterSmallOf = c => c?.posterSmall ?? c?.poster?.replace("_600x900
 // Форма файла cache/<appid>.json. Меняешь её — меняешь здесь, и только здесь.
 export function appCache(appid, data, micro) {
   const cdn = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}`;
+  const asset = (field, fallback) => data.assets?.[field]
+    ? `https://shared.akamai.steamstatic.com/store_item_assets/${data.assets.asset_url_format.replace("${FILENAME}", data.assets[field])}`
+    : fallback;
   return {
     appid: Number(appid),
     name: data.name,
-    hero: `${cdn}/library_hero.jpg`,
-    logo: `${cdn}/logo.png`,
-    poster: `${cdn}/library_600x900_2x.jpg`,
+    hero: asset("library_hero", `${cdn}/library_hero.jpg`),
+    logo: data.libraryLogo === undefined ? `${cdn}/logo.png` : data.libraryLogo,
+    poster: asset("library_capsule_2x", asset("library_capsule", `${cdn}/library_600x900_2x.jpg`)),
     // полке ретина не нужна: карточка 2:3 в сетке — тот же кадр втрое легче.
     // В кэшах, записанных раньше, поля нет — сборка падает на poster
-    posterSmall: `${cdn}/library_600x900.jpg`,
+    posterSmall: asset("library_capsule", `${cdn}/library_600x900.jpg`),
     shots: (data.screenshots ?? []).slice(0, 8).map(s => s.path_full),
     micro,
     // фасеты полки: жанры Steam как есть, кооп — из категорий

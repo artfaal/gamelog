@@ -1,0 +1,27 @@
+{
+  "appid": 4348910,
+  "name": "Probably Stolen - Cyberpunk Shopkeeper Sim",
+  "hero": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/5c4503e62e9ff9d138d93d972ebd1fe62af114bc/library_hero.jpg?t=1794473922",
+  "logo": null,
+  "poster": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/5cb0a6457762778c2c3bcaaa06768bb77cc791a8/library_capsule_2x.jpg?t=1794473922",
+  "posterSmall": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/5cb0a6457762778c2c3bcaaa06768bb77cc791a8/library_capsule.jpg?t=1794473922",
+  "shots": [
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/c3fd208d9830641a432822c2ffb762824980ce7b/ss_c3fd208d9830641a432822c2ffb762824980ce7b.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/309930b942d4670222a3c94cff4d2c27a000bbb4/ss_309930b942d4670222a3c94cff4d2c27a000bbb4.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/f60b54ed03b6d644bce610204ef44d7fbfa12b0f/ss_f60b54ed03b6d644bce610204ef44d7fbfa12b0f.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/a7dd4e3d14b364c7b2f521745df813b19bd1dfff/ss_a7dd4e3d14b364c7b2f521745df813b19bd1dfff.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/29a423c290e82503d25b8ff62c9982b8493f1147/ss_29a423c290e82503d25b8ff62c9982b8493f1147.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/647bda2ca60a9bbd50ea3897353268dff7ceb232/ss_647bda2ca60a9bbd50ea3897353268dff7ceb232.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/8f9b5025a36eea17bd9de5dc234423b100b15ac7/ss_8f9b5025a36eea17bd9de5dc234423b100b15ac7.1920x1080.jpg?t=1794473922",
+    "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4348910/014974d9a80ba54b265b73d40ad64ee60e4119ec/ss_014974d9a80ba54b265b73d40ad64ee60e4119ec.1920x1080.jpg?t=1794473922"
+  ],
+  "micro": null,
+  "genres": [
+    "Indie",
+    "RPG",
+    "Simulation",
+    "Strategy"
+  ],
+  "coop": false,
+  "released": "Oct 28, 2026"
+}
