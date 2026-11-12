@@ -51,7 +51,7 @@ Steam разрешает [русский язык, отрицательные о
 | Oblivion Remastered | 2623190 | skipped | 9,3 ч · 2026-10-14 | |
 | Pacific Drive | 1458140 | published | 21,4 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/1458140) |
 | Pragmata | 3357650 | published | 5,9 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/3357650) |
-| Probably Stolen | 4348910 | ready | 43,3 ч · 2026-11-12 | |
+| Probably Stolen | 4348910 | published | 43,3 ч · 2026-11-12 | [12.11.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/4348910/) |
 | Project Zomboid | 108600 | published | 294,2 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/108600) |
 | Slay the Spire 2 | 2868840 | published | 56,8 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/2868840) |
 | Space Haven | 979110 | published | 8,2 ч · 2026-10-14 | [15.10.2026 · отзыв](https://steamcommunity.com/id/artfaal/recommended/979110) |
@@ -102,5 +102,7 @@ Caves of Qud ждёт дополнительных часов игры: 2026-10-
 2026-10-15 на страницах отзывов Baldur’s Gate 3 и Cyberpunk 2077 без входа в Steam проверены положительные рекомендации, дословный текст сайта, `[h1]`-вердикты и курсивные оценки `9,5/10` и `9/10` соответственно. Авторских изменений текста нет.
 
 Итог переноса опубликованного корпуса на 2026-10-15: 21 отзыв проверен и опубликован, 2 игры отложены, 4 исключены. Статусов `ready`, `needs_time` и `needs_revision` нет. Не-Steam запись Zelda остаётся только на сайте и в эту таблицу не входит.
+
+2026-11-12 на публичной странице Probably Stolen без входа в Steam проверены положительная рекомендация, дословный текст сайта, `[h1]`-вердикт и курсивная оценка `8,5/10`. Авторских изменений текста нет.
 
 Мониторинг комментариев под отзывами — отдельная будущая задача; текущий процесс заканчивается проверкой публичной страницы отзыва.
